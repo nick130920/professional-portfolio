@@ -1,0 +1,17 @@
+node_modules/
+dist/
+playwright-report/
+test-results/
+
+# Local environment, editor, and operating-system artifacts
+.env
+.env.*
+!.env.example
+*.local
+*.log
+coverage/
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+*.tsbuildinfo
