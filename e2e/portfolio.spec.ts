@@ -31,7 +31,7 @@ test.beforeEach(async ({ page }) => {
   await page.goto('/')
 })
 
-test('hero, profile, and all five contact channels remain readable without overflow', async ({ page }) => {
+test('all portfolio sections remain readable without horizontal overflow', async ({ page }) => {
   const hero = page.getByRole('region', { name: 'Nicolás Andrés Muñoz Coronado', exact: true })
   const profile = page.getByRole('region', { name: 'Perfil profesional' })
   const contact = page.getByRole('region', { name: 'Contacto', exact: true })
@@ -46,10 +46,20 @@ test('hero, profile, and all five contact channels remain readable without overf
 
   // Inspect actual rendered text, not just element presence: it must fit its
   // container, remain within the viewport width, and have readable contrast.
-  for (const section of [hero, profile, contact]) {
-    await section.scrollIntoViewIfNeeded()
-    await expect(section.getByRole('heading')).toBeInViewport()
-    const readability = await section.locator('h1:visible, h2:visible, p:visible, dt:visible, dd a:visible').evaluateAll((elements) => {
+  const experience = page.getByRole('region', { name: 'Experiencia profesional' })
+  const skills = page.getByRole('region', { name: 'Habilidades técnicas' })
+  const education = page.getByRole('region', { name: 'Educación', exact: true })
+  const certifications = page.getByRole('region', { name: 'Certificaciones y cursos' })
+  await expect(experience.getByRole('article')).toHaveCount(4)
+  await expect(skills.getByRole('list')).toHaveCount(5)
+  await expect(education.getByRole('article')).toHaveCount(2)
+  await expect(certifications.getByRole('article')).toHaveCount(2)
+
+  for (const section of [hero, profile, experience, skills, education, certifications, contact]) {
+    await section.getByRole('heading').first().scrollIntoViewIfNeeded()
+    await expect(section.getByRole('heading').first()).toBeInViewport()
+    const textElements = section.locator('h1:visible, h2:visible, h3:visible, p:visible, li:not(:has(article)):visible, dt:visible, dd a:visible')
+    const readability = await textElements.evaluateAll((elements) => {
       function luminance(color: string) {
         const channels = color.match(/[\d.]+/g)!.slice(0, 3).map(Number).map((value) => {
           const channel = value / 255
@@ -72,7 +82,7 @@ test('hero, profile, and all five contact channels remain readable without overf
         return {
           text: element.textContent,
           fontSize: parseFloat(style.fontSize),
-          isBodyCopy: element.matches('p:not(.eyebrow), dd a'),
+          isBodyCopy: element.matches('p:not(.eyebrow), li, dd a'),
           lineHeight: style.lineHeight === 'normal' ? box.height : parseFloat(style.lineHeight),
           contrast: (Math.max(foregroundLuminance, backgroundLuminance) + 0.05)
             / (Math.min(foregroundLuminance, backgroundLuminance) + 0.05),
@@ -91,6 +101,10 @@ test('hero, profile, and all five contact channels remain readable without overf
       expect(text.fontSize, `${text.text}: font size`).toBeGreaterThanOrEqual(text.isBodyCopy ? 14 : 11)
       expect(text.lineHeight, `${text.text}: line height`).toBeGreaterThanOrEqual(text.fontSize)
       expect(text.contrast, `${text.text}: WCAG AA contrast`).toBeGreaterThanOrEqual(4.5)
+    }
+    for (const text of await textElements.all()) {
+      await text.scrollIntoViewIfNeeded()
+      await expect(text).toBeInViewport()
     }
     expect(await page.evaluate(() => ({
       document: document.documentElement.scrollWidth,
@@ -113,7 +127,10 @@ test('every internal navigation link reaches its existing named destination', as
   const links = page.locator('a[href^="#"]')
   // Include the wordmark, primary navigation, profile CTA, and footer; the
   // skip link has a separate first-Tab/focus contract below.
-  const destinations = ['#main-content', '#inicio', '#inicio', '#perfil', '#contacto', '#perfil', '#inicio']
+  const destinations = [
+    '#main-content', '#inicio', '#inicio', '#perfil', '#experiencia', '#habilidades',
+    '#formacion', '#certificaciones', '#contacto', '#perfil', '#inicio',
+  ]
   await expect(links).toHaveCount(destinations.length)
   expect(await links.evaluateAll((anchors) => anchors.map((anchor) => anchor.getAttribute('href')))).toEqual(destinations)
   for (let index = 1; index < destinations.length; index++) {
@@ -123,7 +140,7 @@ test('every internal navigation link reaches its existing named destination', as
     await expect(target).toHaveAccessibleName(/\S/)
     await links.nth(index).click()
     await expect(page).toHaveURL(new RegExp(`${destination}$`))
-    await expect(target.getByRole('heading')).toBeInViewport()
+    await expect(target.getByRole('heading').first()).toBeInViewport()
   }
 })
 

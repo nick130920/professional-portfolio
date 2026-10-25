@@ -24,26 +24,28 @@ A focused portfolio provides a shareable professional presence at `nicolasm.pro`
 - Keep dependencies and hosting requirements lightweight.
 - Respect reduced-motion preferences and keyboard navigation.
 - Generated technical artifacts use English; portfolio copy remains Spanish because the user supplied and requested Spanish-facing content.
-- Delivery strategy: `ask-on-risk`.
+- Delivery strategy: `single-pr`, explicitly selected by the user after the oversized-delivery warning; one whole-feature PR is planned, with no push or PR creation authorized yet.
 - Forecast: approximately 900–1,300 authored changed lines, excluding generated lockfiles. This exceeds the 400-line review heuristic because a complete new portfolio requires layout, content, responsive styling, interaction, tests, and documentation; work remains split into cohesive work-unit commits.
 
 ## Tasks
 
 ### PORT-001 — Establish the portfolio foundation
-- [ ] Scaffold a lightweight web application and test setup.
-- [ ] Define semantic page structure, design tokens, typography, and responsive shell.
-- [ ] Add the hero, professional summary, and contact actions using supplied data.
+- [x] Scaffold a lightweight web application and test setup.
+- [x] Define semantic page structure, design tokens, typography, and responsive shell.
+- [x] Add the hero, professional summary, and contact actions using supplied data.
 - Route: delegated (`gentle-ai-worker`) because the task requires multiple non-trivial files.
 - Checks: focused component tests, production build, and accessibility-oriented structural assertions.
-- Commit evidence: pending.
+- Commit evidence: `cb8e790` (`feat: establish portfolio foundation`).
+- RDD assessment: unavailable because the repository has no pre-existing `main` commit/tree; writer self-verification and independent verification completed instead.
 
 ### PORT-002 — Present career and technical expertise
-- [ ] Add the complete experience timeline with roles, dates, locations, and supplied achievements.
-- [ ] Add technical skills grouped by domain.
-- [ ] Add education and certifications.
+- [x] Add the complete experience timeline with roles, dates, locations, and supplied achievements.
+- [x] Add technical skills grouped by domain.
+- [x] Add education and certifications.
 - Route: delegated (`gentle-ai-worker`) because the task requires multi-file implementation and content styling.
 - Checks: content tests, responsive structural inspection, and production build.
-- Commit evidence: pending.
+- Commit evidence: ready for the authorized local work-unit commit.
+- RDD assessment: medium risk, `reviewDue: false` (`under_budget`); writer self-verification stands for the large writer profile.
 
 ### PORT-003 — Polish interaction, metadata, and documentation
 - [ ] Add subtle reveal/navigation interactions with reduced-motion support.
@@ -67,7 +69,7 @@ A focused portfolio provides a shareable professional presence at `nicolasm.pro`
 - Visual direction selected: premium minimalist.
 - Task plan created before the first source-code write.
 - Work resumed from a fresh Pi session with the repository identity correctly bound to `/workspace/nicolasm`.
-- PORT-001 is in progress.
+- PORT-001 is complete and committed; PORT-002 is in progress.
 - The user supplied the complete two-page CV text and verified contact identifiers in chat; factual content is now available for implementation.
 - The first PORT-001 writer stopped before edits because generated dependency/build directories were outside its edit surface.
 - The user explicitly authorized `node_modules/**` and `dist/**` as generated-output surfaces only.
@@ -80,7 +82,15 @@ A focused portfolio provides a shareable professional presence at `nicolasm.pro`
 - `npm run build` passed with TypeScript checks and Vite production compilation.
 - Independent verification confirmed all supplied profile facts and five contact destinations, with no PORT-002 content added prematurely.
 - `npm audit --omit=dev` passed with zero production vulnerabilities; full `npm audit` found one moderate and two critical development-tool vulnerabilities through Vitest 3.2.7.
-- Vite starts successfully, but desktop/mobile and keyboard behavior remain pending until Playwright headless verification is added.
+- Playwright 1.64.1 verified eight Chromium checks across 1440×900 and 375×812 viewports, including overflow, readable content, internal navigation, exact contact destinations, skip-link focus transfer, and keyboard focus visibility.
+- Vitest 4.1.12 passes all four component tests; `npm audit` and `npm audit --omit=dev` both report zero vulnerabilities.
+- PORT-001 was committed on `feat/professional-portfolio` as `cb8e790` (`feat: establish portfolio foundation`).
+- The user selected one single PR for the whole feature after being shown the reviewer-load and rollback tradeoffs.
+- Native RDD assessment was unavailable because this root commit has no pre-existing `main` tree; independent verification remains the evidence of record.
+- PORT-002 adds all four CV roles and 13 achievements, five skill groups with all 41 supplied skills, both education entries, and the supplied Scrum/Platzi details.
+- Parent review restored the exact domain term “administración de rentas” and the CI/CD and JWT/OAuth2 purposes; regression tests now preserve both facts.
+- PORT-002 verification passed 8 component tests, 8 Chromium checks across desktop/mobile, the production build, and `git diff --check`; warning-level LSP diagnostics reported no findings, with two silent-on-clean files unconfirmed.
+- Native RDD assessment classified PORT-002 as medium risk with `reviewDue: false` because the 351-line candidate is under budget; the large writer's self-verification stands.
 
 ## Next Step
-Add Playwright headless functional coverage for 375px and 1440px viewports, keyboard navigation, skip-link focus, link destinations, and horizontal overflow; upgrade test tooling without forced breaking remediation, then re-run the full checks.
+Create the authorized local PORT-002 work-unit commit, then implement PORT-003 interaction, metadata, print behavior, documentation, and final verification.
