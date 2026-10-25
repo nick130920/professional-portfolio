@@ -48,6 +48,7 @@ section { scroll-margin-top: 2rem; }
 .wordmark span, .accent { color: var(--blue); }
 nav { display: flex; flex-wrap: wrap; justify-content: flex-end; column-gap: 1.5rem; }
 nav a { padding-block: 0.75rem; font-size: 0.875rem; text-decoration: none; }
+nav a[aria-current="location"] { color: var(--blue); text-decoration: underline; }
 .hero { display: grid; grid-template-columns: minmax(0, 1fr) 210px; gap: 3rem; padding-block: 5.5rem 6rem; }
 .eyebrow { color: var(--blue); font-size: 0.7rem; font-weight: 700; line-height: 1.6; letter-spacing: 0.12em; text-transform: uppercase; }
 h1 { margin-block: 1.5rem; font-size: clamp(2.7rem, 5.3vw, 4.4rem); font-weight: 650; line-height: 1.08; letter-spacing: -0.055em; }
@@ -118,6 +119,55 @@ dd a span { flex-shrink: 0; color: var(--blue); }
   .site-footer { flex-direction: column; gap: 0.5rem; }
 }
 
-@media (prefers-reduced-motion: no-preference) {
-  .button { transition: background-color 150ms ease, color 150ms ease; }
+/* Reveal only the decorative rule: text never changes opacity or position. */
+@media screen and (prefers-reduced-motion: no-preference) {
+  .button, nav a { transition: background-color 150ms ease, color 150ms ease; }
+  [data-revealed="true"] { animation: section-arrival 450ms ease-out; }
+  @keyframes section-arrival {
+    from { border-top-color: var(--blue); }
+    to { border-top-color: var(--line); }
+  }
+}
+
+@page { size: A4; margin: 16mm; }
+@media print {
+  :root { color: #111; background: white; font-size: 10pt; }
+  body { min-width: 0; background: white; }
+  *, *::before, *::after {
+    animation: none !important;
+    transition: none !important;
+    text-shadow: none !important;
+    box-shadow: none !important;
+  }
+  .shell { width: 100%; margin: 0; }
+  .site-header, .skip-link, .hero-actions, .hero-note, .site-footer { display: none; }
+  .hero, .section { display: block; padding-block: 12pt; }
+  .hero { padding-top: 0; }
+  .section { border-color: #bbb; }
+  h1 { margin-block: 8pt; font-size: 25pt; }
+  h2 { margin: 0 0 10pt; font-size: 16pt; }
+  h3 { font-size: 11pt; }
+  h1, h2, h3, .section-heading { break-after: avoid; }
+  p, li { orphans: 3; widows: 3; }
+  .eyebrow { display: none; }
+  .positioning, .profile-copy .lead { font-size: 11pt; }
+  .hero-summary { max-width: none; margin-top: 8pt; }
+  .profile-copy p, .hero-summary, .achievements { color: #222; font-size: 10pt; line-height: 1.5; }
+  .timeline { padding-left: 0; }
+  .timeline-entry { padding: 0 0 14pt; border: 0; }
+  .timeline-entry::before { display: none; }
+  .timeline-entry, .credential, .skill-group, .contact-row { break-inside: avoid; }
+  .entry-date, .entry-role, .entry-location, dt, dd a { color: #222; font-size: 10pt; }
+  .entry-date { margin-bottom: 3pt; }
+  .achievements { margin-top: 6pt; }
+  .achievements li + li { margin-top: 4pt; }
+  .skill-group + .skill-group, .credential + .credential { margin-top: 10pt; padding-top: 10pt; }
+  .skill-list { gap: 3pt 9pt; margin-top: 5pt; }
+  .skill-list li { padding: 0; border: 0; background: none; color: #222; font-size: 10pt; }
+  .contact { margin-bottom: 0; }
+  .section-heading > p:last-child:not(.eyebrow) { display: none; }
+  .contact-row { grid-template-columns: 65pt minmax(0, 1fr); gap: 8pt; padding-block: 4pt; }
+  dd a { display: inline; overflow-wrap: anywhere; }
+  dd a span { display: none; }
+  a { color: #111; text-decoration: none; }
 }

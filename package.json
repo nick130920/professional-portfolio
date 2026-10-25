@@ -5,10 +5,10 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "tsc -p tsconfig.app.json && tsc -p tsconfig.node.json && vite build",
+    "build": "tsc -p tsconfig.app.json && tsc -p tsconfig.node.json && vite build && node src/test/prerender.mjs",
     "preview": "vite preview",
     "test": "vitest --exclude 'e2e/**'",
-    "e2e": "PLAYWRIGHT_BROWSERS_PATH=0 playwright test"
+    "e2e": "npm run build && PLAYWRIGHT_BROWSERS_PATH=0 playwright test"
   },
   "dependencies": {
     "react": "^19.0.0",

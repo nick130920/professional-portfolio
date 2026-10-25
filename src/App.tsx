@@ -1,3 +1,11 @@
+import { useEffect, useRef, useState } from 'react'
+
+const navigation = [
+  ['inicio', 'Inicio'], ['perfil', 'Perfil'], ['experiencia', 'Experiencia'],
+  ['habilidades', 'Habilidades'], ['formacion', 'Formación'],
+  ['certificaciones', 'Certificaciones'], ['contacto', 'Contacto'],
+]
+
 const contacts = [
   { label: 'Correo', text: 'namc1309@gmail.com', href: 'mailto:namc1309@gmail.com' },
   { label: 'Teléfono', text: '+57 310 3850396', href: 'tel:+573103850396' },
@@ -80,6 +88,44 @@ const education = [
 ]
 
 export default function App() {
+  const mainRef = useRef<HTMLElement>(null)
+  const [currentSection, setCurrentSection] = useState('inicio')
+
+  useEffect(() => {
+    const updateLocation = () => setCurrentSection(window.location.hash.slice(1) || 'inicio')
+    updateLocation()
+    window.addEventListener('hashchange', updateLocation)
+    return () => window.removeEventListener('hashchange', updateLocation)
+  }, [])
+
+  useEffect(() => {
+    if (!window.matchMedia || !('IntersectionObserver' in window)) return
+    const motion = window.matchMedia('(prefers-reduced-motion: no-preference)')
+    const targets = mainRef.current?.querySelectorAll<HTMLElement>('[data-reveal]') ?? []
+    let observer: IntersectionObserver | undefined
+
+    const updateMotion = () => {
+      observer?.disconnect()
+      targets.forEach((target) => target.removeAttribute('data-revealed'))
+      if (!motion.matches) return
+      observer = new IntersectionObserver((entries) => {
+        entries.forEach(({ target, isIntersecting }) => {
+          if (!isIntersecting) return
+          target.setAttribute('data-revealed', 'true')
+          observer?.unobserve(target)
+        })
+      }, { threshold: 0, rootMargin: '0px 0px -24px 0px' })
+      targets.forEach((target) => observer?.observe(target))
+    }
+    updateMotion()
+    motion.addEventListener('change', updateMotion)
+    return () => {
+      observer?.disconnect()
+      motion.removeEventListener('change', updateMotion)
+      targets.forEach((target) => target.removeAttribute('data-revealed'))
+    }
+  }, [])
+
   return (
     <>
       <a className="skip-link" href="#main-content">Saltar al contenido</a>
@@ -89,17 +135,15 @@ export default function App() {
           nm<span aria-hidden="true">.</span>
         </a>
         <nav aria-label="Navegación principal">
-          <a href="#inicio">Inicio</a>
-          <a href="#perfil">Perfil</a>
-          <a href="#experiencia">Experiencia</a>
-          <a href="#habilidades">Habilidades</a>
-          <a href="#formacion">Formación</a>
-          <a href="#certificaciones">Certificaciones</a>
-          <a href="#contacto">Contacto</a>
+          {navigation.map(([id, label]) => (
+            <a key={id} href={`#${id}`} aria-current={currentSection === id ? 'location' : undefined}>
+              {label}
+            </a>
+          ))}
         </nav>
       </header>
 
-      <main id="main-content" className="shell" tabIndex={-1}>
+      <main ref={mainRef} id="main-content" className="shell" tabIndex={-1}>
         <section id="inicio" className="hero" aria-labelledby="hero-title">
           <div className="hero-copy">
             <p className="eyebrow">Ingeniería de software · Arquitectura</p>
@@ -125,7 +169,7 @@ export default function App() {
           </div>
         </section>
 
-        <section id="perfil" className="section profile" aria-labelledby="profile-title">
+        <section id="perfil" data-reveal className="section profile" aria-labelledby="profile-title">
           <div className="section-heading">
             <p className="eyebrow">01 / Sobre mí</p>
             <h2 id="profile-title">Perfil profesional</h2>
@@ -144,7 +188,7 @@ export default function App() {
           </div>
         </section>
 
-        <section id="experiencia" className="section" aria-labelledby="experience-title">
+        <section id="experiencia" data-reveal className="section" aria-labelledby="experience-title">
           <div className="section-heading">
             <p className="eyebrow">02 / Trayectoria</p>
             <h2 id="experience-title">Experiencia profesional</h2>
@@ -170,7 +214,7 @@ export default function App() {
           </ol>
         </section>
 
-        <section id="habilidades" className="section" aria-labelledby="skills-title">
+        <section id="habilidades" data-reveal className="section" aria-labelledby="skills-title">
           <div className="section-heading">
             <p className="eyebrow">03 / Conocimientos</p>
             <h2 id="skills-title">Habilidades técnicas</h2>
@@ -187,7 +231,7 @@ export default function App() {
           </div>
         </section>
 
-        <section id="formacion" className="section" aria-labelledby="education-title">
+        <section id="formacion" data-reveal className="section" aria-labelledby="education-title">
           <div className="section-heading">
             <p className="eyebrow">04 / Formación académica</p>
             <h2 id="education-title">Educación</h2>
@@ -204,7 +248,7 @@ export default function App() {
           </div>
         </section>
 
-        <section id="certificaciones" className="section" aria-labelledby="certifications-title">
+        <section id="certificaciones" data-reveal className="section" aria-labelledby="certifications-title">
           <div className="section-heading">
             <p className="eyebrow">05 / Formación complementaria</p>
             <h2 id="certifications-title">Certificaciones y cursos</h2>
@@ -221,7 +265,7 @@ export default function App() {
           </div>
         </section>
 
-        <section id="contacto" className="section contact" aria-labelledby="contact-title">
+        <section id="contacto" data-reveal className="section contact" aria-labelledby="contact-title">
           <div className="section-heading">
             <p className="eyebrow">06 / Conversemos</p>
             <h2 id="contact-title">Contacto</h2>

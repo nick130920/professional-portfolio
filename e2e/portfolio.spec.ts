@@ -1,3 +1,4 @@
+import { readFile } from 'node:fs/promises'
 import { expect, test, type Locator } from '@playwright/test'
 
 const contactHrefs = [
@@ -29,6 +30,129 @@ async function expectVisibleFocus(locator: Locator) {
 
 test.beforeEach(async ({ page }) => {
   await page.goto('/')
+})
+
+test('production HTML stays readable and navigable with JavaScript disabled', async ({ browser, baseURL, page: testPage }) => {
+  const context = await browser.newContext({ javaScriptEnabled: false, viewport: testPage.viewportSize()! })
+  // Serve only the built document and its CSS: this tests the deployable HTML,
+  // not Vite's client-rendered development shell, without another HTTP server.
+  await context.route('**/*', async (route) => {
+    const path = new URL(route.request().url()).pathname
+    if (path === '/') {
+      await route.fulfill({ contentType: 'text/html', body: await readFile('dist/index.html') })
+    } else if (/^\/assets\/[\w.-]+\.css$/.test(path)) {
+      await route.fulfill({ contentType: 'text/css', body: await readFile(`dist${path}`) })
+    } else {
+      await route.abort()
+    }
+  })
+  try {
+    const page = await context.newPage()
+    await page.goto(baseURL!)
+    await expect(page).toHaveTitle('Nicolás Muñoz | Ingeniero de Software Full-Stack y Arquitecto Desarrollador')
+    await expect(page.locator('link[rel="canonical"]')).toHaveAttribute('href', 'https://nicolasm.pro/')
+    await expect(page.getByRole('heading', { level: 1 })).toBeVisible()
+    await expect(page.locator('[data-reveal]')).toHaveCount(6)
+    for (const section of await page.locator('main > section').all()) {
+      await expect(section).toBeVisible()
+      await expect(section).toHaveCSS('opacity', '1')
+      await expect(section).toHaveCSS('animation-name', 'none')
+    }
+    await page.getByRole('navigation').getByRole('link', { name: 'Contacto', exact: true }).click()
+    await expect(page.locator('#contact-title')).toBeInViewport()
+    await expect(page.locator('#contacto a')).toHaveCount(5)
+  } finally {
+    await context.close()
+  }
+})
+
+test('production HTML hydrates without errors and enhances native navigation', async ({ page }) => {
+  const errors: string[] = []
+  page.on('pageerror', (error) => errors.push(error.message))
+  page.on('console', (message) => {
+    if (message.type() === 'error') errors.push(message.text())
+  })
+  await page.route('**/*', async (route) => {
+    const path = new URL(route.request().url()).pathname
+    if (path === '/' || /^\/assets\/[\w.-]+\.(css|js)$/.test(path)) {
+      const contentType = path.endsWith('.js') ? 'text/javascript' : path.endsWith('.css') ? 'text/css' : 'text/html'
+      await route.fulfill({ contentType, body: await readFile(path === '/' ? 'dist/index.html' : `dist${path}`) })
+    } else {
+      await route.continue()
+    }
+  })
+  await page.goto('/')
+  const contactLink = page.getByRole('navigation').getByRole('link', { name: 'Contacto', exact: true })
+  await contactLink.click()
+  await expect(contactLink).toHaveAttribute('aria-current', 'location')
+  await expect(page.locator('#contact-title')).toBeInViewport()
+  expect(errors).toEqual([])
+})
+
+test('normal motion uses a subtle one-shot reveal without hiding or translating text', async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: 'no-preference' })
+  await page.reload()
+  const sections = page.locator('[data-reveal]')
+  await expect(sections).toHaveCount(6)
+  const contact = page.locator('#contacto')
+  await contact.scrollIntoViewIfNeeded()
+  await expect(contact).toHaveAttribute('data-revealed', 'true')
+  const motion = await contact.evaluate((element) => {
+    const style = getComputedStyle(element)
+    return { opacity: style.opacity, transform: style.transform, animation: style.animationName, duration: style.animationDuration }
+  })
+  expect(motion).toEqual({ opacity: '1', transform: 'none', animation: 'section-arrival', duration: '0.45s' })
+  await expect(contact.getByRole('link').first()).toBeVisible()
+  await page.getByRole('navigation').getByRole('link', { name: 'Experiencia', exact: true }).click()
+  await expect(page.getByRole('navigation').getByRole('link', { name: 'Experiencia', exact: true }))
+    .toHaveAttribute('aria-current', 'location')
+  await expect(page.locator('#experiencia')).toHaveCSS('opacity', '1')
+})
+
+test('reduced motion keeps every section visible with no reveal animation or transition', async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: 'reduce' })
+  await page.reload()
+  const sections = page.locator('[data-reveal]')
+  await expect(sections).toHaveCount(6)
+  for (const section of await sections.all()) {
+    await section.scrollIntoViewIfNeeded()
+    await expect(section).toBeVisible()
+    await expect(section).toHaveCSS('opacity', '1')
+    await expect(section).toHaveCSS('transform', 'none')
+    await expect(section).toHaveCSS('animation-name', 'none')
+    await expect(section).toHaveCSS('transition-duration', '0s')
+  }
+  await expect(page.locator('html')).toHaveCSS('scroll-behavior', 'auto')
+  // Changing the preference live must also stop already-enabled effects.
+  await page.emulateMedia({ reducedMotion: 'no-preference' })
+  await page.locator('#perfil').scrollIntoViewIfNeeded()
+  await page.emulateMedia({ reducedMotion: 'reduce' })
+  await expect(page.locator('[data-revealed]')).toHaveCount(0)
+  await expect(page.locator('#perfil')).toHaveCSS('animation-name', 'none')
+})
+
+test('print media is a readable CV with contact details but no navigation or decorative actions', async ({ page }) => {
+  await page.emulateMedia({ media: 'print' })
+  for (const selector of ['.site-header', '.skip-link', '.hero-actions', '.hero-note', '.site-footer']) {
+    await expect(page.locator(selector)).toHaveCSS('display', 'none')
+  }
+  await expect(page.locator('body')).toHaveCSS('background-color', 'rgb(255, 255, 255)')
+  await expect(page.locator('main')).toHaveCSS('width', `${page.viewportSize()!.width}px`)
+  await expect(page.locator('.hero')).toHaveCSS('display', 'block')
+  for (const section of await page.locator('main > section').all()) {
+    await expect(section).toBeVisible()
+    await expect(section).toHaveCSS('display', 'block')
+    await expect(section).toHaveCSS('animation-name', 'none')
+    await expect(section).toHaveCSS('transition-duration', '0s')
+    await expect(section).toHaveCSS('opacity', '1')
+  }
+  for (const item of await page.locator('.timeline-entry, .credential, .skill-group, .contact-row').all()) {
+    await expect(item).toHaveCSS('break-inside', 'avoid')
+  }
+  await expect(page.locator('h2').first()).toHaveCSS('break-after', 'avoid')
+  await expect(page.locator('.contact-row a')).toHaveCount(5)
+  await expect(page.locator('.contact-row a').first()).toBeVisible()
+  await expect(page.locator('.achievements').first()).toHaveCSS('font-size', '13.3333px')
 })
 
 test('all portfolio sections remain readable without horizontal overflow', async ({ page }) => {

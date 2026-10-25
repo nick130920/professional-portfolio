@@ -1,8 +1,56 @@
-import { render, screen, within } from '@testing-library/react'
-import { describe, expect, it } from 'vitest'
+import { fireEvent, render, screen, within } from '@testing-library/react'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import App from './App'
 
 const identity = 'Nicolás Andrés Muñoz Coronado'
+
+afterEach(() => {
+  vi.unstubAllGlobals()
+  window.history.replaceState(null, '', '/')
+})
+
+describe('Progressive enhancement', () => {
+  it('keeps reveal targets readable when browser enhancement APIs are unavailable', () => {
+    render(<App />)
+
+    const targets = document.querySelectorAll('[data-reveal]')
+    expect(targets).toHaveLength(6)
+    targets.forEach((target) => {
+      expect(target).toBeVisible()
+      expect(target).not.toHaveAttribute('hidden')
+      expect(target).not.toHaveAttribute('aria-hidden')
+      expect(target).not.toHaveAttribute('data-revealed')
+    })
+  })
+
+  it('marks the current hash destination without intercepting native links or moving focus', () => {
+    render(<App />)
+    const navigation = screen.getByRole('navigation')
+    expect(within(navigation).getByRole('link', { name: 'Inicio' }))
+      .toHaveAttribute('aria-current', 'location')
+
+    window.history.replaceState(null, '', '/#experiencia')
+    fireEvent(window, new Event('hashchange'))
+    expect(within(navigation).getByRole('link', { name: 'Experiencia' }))
+      .toHaveAttribute('aria-current', 'location')
+    expect(within(navigation).getByRole('link', { name: 'Inicio' }))
+      .not.toHaveAttribute('aria-current')
+    expect(document.activeElement).toBe(document.body)
+  })
+
+  it('does not start reveal observation when reduced motion is requested', () => {
+    const observer = vi.fn()
+    vi.stubGlobal('IntersectionObserver', observer)
+    vi.stubGlobal('matchMedia', () => ({
+      matches: false, addEventListener: vi.fn(), removeEventListener: vi.fn(),
+    }))
+    render(<App />)
+
+    expect(document.querySelectorAll('[data-reveal]')).toHaveLength(6)
+    expect(observer).not.toHaveBeenCalled()
+    expect(document.querySelector('[data-revealed]')).toBeNull()
+  })
+})
 
 describe('Portfolio foundation', () => {
   it('introduces the exact identity, current positioning, and experience', () => {

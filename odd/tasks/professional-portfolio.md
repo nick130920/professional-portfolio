@@ -44,17 +44,17 @@ A focused portfolio provides a shareable professional presence at `nicolasm.pro`
 - [x] Add education and certifications.
 - Route: delegated (`gentle-ai-worker`) because the task requires multi-file implementation and content styling.
 - Checks: content tests, responsive structural inspection, and production build.
-- Commit evidence: ready for the authorized local work-unit commit.
+- Commit evidence: `86de484` (`feat: present career and technical expertise`).
 - RDD assessment: medium risk, `reviewDue: false` (`under_budget`); writer self-verification stands for the large writer profile.
 
 ### PORT-003 — Polish interaction, metadata, and documentation
-- [ ] Add subtle reveal/navigation interactions with reduced-motion support.
-- [ ] Add SEO/social metadata, favicon treatment, and printable behavior.
-- [ ] Document local development and deployment.
-- [ ] Complete functional responsive verification.
+- [x] Add subtle reveal/navigation interactions with reduced-motion support.
+- [x] Add SEO/social metadata, favicon treatment, and printable behavior.
+- [x] Document local development and deployment.
+- [x] Complete functional responsive verification.
 - Route: delegated (`gentle-ai-worker`) because behavior, metadata, tests, and documentation span multiple files.
-- Checks: tests, lint/type diagnostics where available, production build, and browser verification at desktop/mobile widths.
-- Commit evidence: pending.
+- Checks: 15 component/metadata tests, 18 Chromium checks at desktop/mobile widths, production build, clean deployment inventory, dependency audits, and independent verification.
+- Commit evidence: `2576159` (`feat: polish portfolio delivery`).
 
 ## Acceptance Criteria
 1. A recruiter can understand Nicolás's current role, specialization, and experience within the first screen.
@@ -69,7 +69,7 @@ A focused portfolio provides a shareable professional presence at `nicolasm.pro`
 - Visual direction selected: premium minimalist.
 - Task plan created before the first source-code write.
 - Work resumed from a fresh Pi session with the repository identity correctly bound to `/workspace/nicolasm`.
-- PORT-001 is complete and committed; PORT-002 is in progress.
+- PORT-001, PORT-002, and PORT-003 are complete, independently verified, and committed locally.
 - The user supplied the complete two-page CV text and verified contact identifiers in chat; factual content is now available for implementation.
 - The first PORT-001 writer stopped before edits because generated dependency/build directories were outside its edit surface.
 - The user explicitly authorized `node_modules/**` and `dist/**` as generated-output surfaces only.
@@ -90,7 +90,14 @@ A focused portfolio provides a shareable professional presence at `nicolasm.pro`
 - PORT-002 adds all four CV roles and 13 achievements, five skill groups with all 41 supplied skills, both education entries, and the supplied Scrum/Platzi details.
 - Parent review restored the exact domain term “administración de rentas” and the CI/CD and JWT/OAuth2 purposes; regression tests now preserve both facts.
 - PORT-002 verification passed 8 component tests, 8 Chromium checks across desktop/mobile, the production build, and `git diff --check`; warning-level LSP diagnostics reported no findings, with two silent-on-clean files unconfirmed.
-- Native RDD assessment classified PORT-002 as medium risk with `reviewDue: false` because the 351-line candidate is under budget; the large writer's self-verification stands.
+- Native RDD assessment classified PORT-002 as medium risk with `reviewDue: false` because the candidate is under budget; the large writer's self-verification stands.
+- PORT-002 was committed on `feat/professional-portfolio` as `86de484` (`feat: present career and technical expertise`); the committed range from `cb8e790` was reassessed as medium risk with 374 changed lines and `reviewDue: false`.
+- PORT-003 adds progressive enhancement with native-anchor navigation, decorative-only reveal behavior, live reduced-motion handling, truthful SEO/social metadata, an authored SVG favicon, single-column print styling, prerendered no-JavaScript content, and complete English development/deployment documentation.
+- Initial independent verification found that `vite build --emptyOutDir false` retained stale deployable assets; the build now restores Vite's default output cleaning and keeps prerender cache in ignored `node_modules/.vite-prerender`.
+- Final independent verification approved PORT-003: 15 component/metadata tests, 18 Chromium checks, production build, both audits, and `git diff --check` pass. Standalone and E2E builds each leave exactly four publishable files in `dist/`, with no stale assets or `dist/.vite` cache.
+- Native RDD inspection remains unavailable with `native-inspect-input-invalid` / `committed-only-invalid`; no review lineage was created.
+
+- PORT-003 was committed locally as `2576159` (`feat: polish portfolio delivery`).
 
 ## Next Step
-Create the authorized local PORT-002 work-unit commit, then implement PORT-003 interaction, metadata, print behavior, documentation, and final verification.
+Decide whether to publish the feature branch and create the planned single pull request; neither action has been performed.
