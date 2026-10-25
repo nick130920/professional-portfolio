@@ -54,7 +54,7 @@ A focused portfolio provides a shareable professional presence at `nicolasm.pro`
 - [x] Complete functional responsive verification.
 - Route: delegated (`gentle-ai-worker`) because behavior, metadata, tests, and documentation span multiple files.
 - Checks: 15 component/metadata tests, 18 Chromium checks at desktop/mobile widths, production build, clean deployment inventory, dependency audits, and independent verification.
-- Commit evidence: `2576159` (`feat: polish portfolio delivery`).
+- Commit evidence: `f865277` (`feat: polish portfolio delivery`).
 
 ## Acceptance Criteria
 1. A recruiter can understand Nicolás's current role, specialization, and experience within the first screen.
@@ -97,7 +97,7 @@ A focused portfolio provides a shareable professional presence at `nicolasm.pro`
 - Final independent verification approved PORT-003: 15 component/metadata tests, 18 Chromium checks, production build, both audits, and `git diff --check` pass. Standalone and E2E builds each leave exactly four publishable files in `dist/`, with no stale assets or `dist/.vite` cache.
 - Native RDD inspection remains unavailable with `native-inspect-input-invalid` / `committed-only-invalid`; no review lineage was created.
 
-- PORT-003 was committed locally as `2576159` (`feat: polish portfolio delivery`).
+- PORT-003 was committed locally as `f865277` (`feat: polish portfolio delivery`).
 
 ## Next Step
 Decide whether to publish the feature branch and create the planned single pull request; neither action has been performed.
