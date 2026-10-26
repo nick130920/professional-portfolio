@@ -25,14 +25,14 @@ Transform the existing professional portfolio into a distinctive editorial-techn
 - [x] Add only factual editorial markers derived from existing portfolio content.
 - [x] Preserve semantic structure, focus behavior, and native navigation.
 - Verification: 12 focused component tests and 20 Chromium checks passed; production build and prerender completed; responsive, keyboard, reduced-motion, print, and JavaScript-disabled assertions passed; `git diff --check` passed.
-- Commit evidence: pending local work-unit commit.
+- Commit evidence: `70414ee` (`feat: establish editorial portfolio identity`).
 
 ### DESIGN-002 — Reframe career and expertise
-- [ ] Make professional experience the central visual narrative.
-- [ ] Improve scanability of roles, dates, locations, achievements, and skill groups.
-- [ ] Give profile, education, and certifications distinct editorial rhythms without altering content.
-- Verification: exact-content tests, desktop/mobile browser checks, and overflow inspection.
-- Commit evidence: pending.
+- [x] Make professional experience the central visual narrative.
+- [x] Improve scanability of roles, dates, locations, achievements, and skill groups.
+- [x] Give profile, education, and certifications distinct editorial rhythms without altering content.
+- Verification: 14 component tests and 22 Chromium checks passed; production build and prerender completed; exact Spanish CV and contact content remained unchanged; responsive checks passed at 1440, 1000, 850, 600, 375, and 320 px; keyboard, reduced-motion, print, JavaScript-disabled, and diff checks passed.
+- Commit evidence: pending local work-unit commit.
 
 ### DESIGN-003 — Polish responsive delivery
 - [ ] Refine contact, footer, micro-interactions, and narrow-screen navigation.

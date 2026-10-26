@@ -101,16 +101,48 @@ describe('Portfolio foundation', () => {
     expect(screen.getAllByRole('heading', { level: 1 })).toHaveLength(1)
   })
 
+  it('separates each career masthead from its complete achievement list', () => {
+    render(<App />)
+
+    const career = screen.getByRole('region', { name: 'Experiencia profesional' })
+    for (const entry of within(career).getAllByRole('article')) {
+      const masthead = entry.querySelector('header')
+      expect(masthead).not.toBeNull()
+      if (!masthead) throw new Error('Missing career masthead')
+      expect(within(masthead).getByRole('heading', { level: 3 })).toBeVisible()
+      expect(masthead.querySelector('.entry-date')).not.toBeNull()
+      expect(masthead.querySelector('.entry-role')).not.toBeNull()
+      expect(masthead.querySelector('.entry-location')).not.toBeNull()
+      const achievements = within(entry).getByRole('list')
+      expect(masthead).not.toContainElement(achievements)
+      expect(masthead.nextElementSibling).toBe(achievements)
+    }
+  })
+
+  it('makes every skill domain an independently named section in the original order', () => {
+    render(<App />)
+
+    const skills = screen.getByRole('region', { name: 'Habilidades técnicas' })
+    const groups = within(skills).getAllByRole('region')
+    expect(groups.map((group) => within(group).getByRole('heading').textContent)).toEqual([
+      'Lenguajes', 'Frameworks y backend', 'Bases de datos',
+      'Cloud, DevOps y herramientas IA', 'Arquitectura y seguridad',
+    ])
+    for (const group of groups) {
+      const name = within(group).getByRole('heading').textContent!
+      expect(group).toHaveAccessibleName(name)
+      expect(within(group).getByRole('list', { name })).toBeVisible()
+    }
+  })
+
   it('preserves the supplied professional profile', () => {
     render(<App />)
 
     const profile = screen.getByRole('region', { name: 'Perfil profesional' })
     for (const fact of [
-      'Go, Java y Spring Boot',
-      'Angular, Flutter e Ionic',
-      'nube e inteligencia artificial',
-      'CI/CD con Fury',
-      'pruebas y observabilidad con Datadog y New Relic',
+      'Desarrollo full-stack con perspectiva de arquitectura.',
+      'Mi experiencia abarca el desarrollo backend con Go, Java y Spring Boot, y soluciones frontend y móviles con Angular, Flutter e Ionic, en los sectores financiero y e-commerce.',
+      'Trabajo en la optimización de flujos de trabajo con nube e inteligencia artificial, CI/CD con Fury, y pruebas y observabilidad con Datadog y New Relic.',
     ]) {
       expect(profile).toHaveTextContent(fact)
     }
@@ -128,37 +160,37 @@ describe('Portfolio foundation', () => {
         company: 'Ceiba Software - Mercado Libre', role: 'Arquitecto Desarrollador Golang',
         location: 'Medellín, Antioquia', dates: 'Jun 2025 – presente',
         achievements: [
-          /arquitecturas distribuidas en Golang.*alta demanda operativa.*estándares de la industria/i,
-          /entrenamiento de IA en la nube.*MeliGPT.*automatizar tareas complejas.*eficiencia/i,
-          /CI\/CD en Fury.*IA.*aseguramiento de calidad.*pruebas unitarias exhaustivas/i,
-          /observabilidad.*Datadog, Grafana y New Relic.*consultas complejas en BigQuery y MySQL/i,
+          'Diseño de arquitecturas distribuidas en Golang para soportar una alta demanda operativa, alineadas con los estándares de la industria.',
+          'Desarrollo y entrenamiento de IA en la nube, con instrucción de modelos como MeliGPT para automatizar tareas complejas y maximizar la eficiencia.',
+          'Gestión de despliegues CI/CD en Fury potenciados por IA y aseguramiento de calidad mediante el diseño de pruebas unitarias exhaustivas.',
+          'Implementación de observabilidad avanzada con Datadog, Grafana y New Relic, y optimización de consultas complejas en BigQuery y MySQL.',
         ],
       },
       {
         company: 'Ada S.A', role: 'Líder Técnico & Desarrollador Fullstack',
         location: 'Medellín, Antioquia', dates: 'Sep 2024 – Jun 2025',
         achievements: [
-          /coordinación técnica de equipos backend.*migraciones.*sistemas financieros.*administración de rentas y facturación/i,
-          /diseño integral de Fashion Maps.*geolocalización.*Flutter.*backend robusto en Java/i,
-          /pipelines CI\/CD.*arquitecturas distribuidas.*automatización de despliegues/i,
+          'Coordinación técnica de equipos backend para migraciones de aplicaciones y sistemas financieros de administración de rentas y facturación.',
+          'Liderazgo del diseño integral de Fashion Maps, una aplicación móvil de geolocalización con frontend en Flutter y backend robusto en Java.',
+          'Diseño de pipelines CI/CD y optimización mediante arquitecturas distribuidas y automatización de despliegues.',
         ],
       },
       {
         company: 'Universidad Surcolombiana', role: 'Desarrollador FullStack',
         location: 'Neiva, Huila', dates: 'Sep 2021 – Nov 2024',
         achievements: [
-          /SIVIPS.*Sistema Integrado de Vicerrectoría Investigación y Proyección Social.*Spring Boot y Angular/i,
-          /refactorización profunda.*sistemas heredados.*Arquitectura Hexagonal.*deuda técnica.*mantenibilidad/i,
-          /CI\/CD automatizado.*JWT y OAuth2/i,
+          'Liderazgo del desarrollo de SIVIPS (Sistema Integrado de Vicerrectoría Investigación y Proyección Social) con Spring Boot y Angular.',
+          'Refactorización profunda de sistemas heredados hacia Arquitectura Hexagonal, reduciendo la deuda técnica y mejorando la mantenibilidad.',
+          'Implementación de CI/CD automatizado para aumentar la frecuencia de despliegue, y de JWT y OAuth2 para proteger la información.',
         ],
       },
       {
         company: 'Yoly Shoes', role: 'Desarrollador Full-Stack',
         location: 'Neiva, Huila', dates: 'Feb 2020 – Dic 2020',
         achievements: [
-          /e-commerce B2C desde cero.*digitalizar y modernizar el canal de ventas/i,
-          /optimización.*tiempos de consulta en MySQL.*navegación fluida/i,
-          /APIs RESTful.*pasarelas de pago.*logística integral de envíos/i,
+          'Construcción de una plataforma e-commerce B2C desde cero para digitalizar y modernizar el canal de ventas.',
+          'Optimización profunda de los tiempos de consulta en MySQL para una navegación fluida.',
+          'Desarrollo e integración de APIs RESTful para pasarelas de pago y logística integral de envíos.',
         ],
       },
     ]
@@ -173,7 +205,7 @@ describe('Portfolio foundation', () => {
       const points = within(entry).getAllByRole('listitem')
       expect(points).toHaveLength(achievements.length)
       achievements.forEach((achievement, pointIndex) => {
-        expect(points[pointIndex]).toHaveTextContent(achievement)
+        expect(points[pointIndex].textContent).toBe(achievement)
       })
     })
     expect(within(experience).getAllByText('presente', { exact: true })).toHaveLength(1)

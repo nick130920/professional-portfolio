@@ -113,6 +113,60 @@ test('editorial identity keeps the current role factual and the hero composition
   }
 })
 
+test('career and expertise use distinct editorial layouts without changing reading order', async ({ page }) => {
+  const career = page.getByRole('region', { name: 'Experiencia profesional' })
+  const skills = page.getByRole('region', { name: 'Habilidades técnicas' })
+  const education = page.getByRole('region', { name: 'Educación', exact: true })
+  const certifications = page.getByRole('region', { name: 'Certificaciones y cursos' })
+
+  for (const width of [1440, 1000, 850, 600, 375, 320]) {
+    await page.setViewportSize({ width, height: 900 })
+    const heading = (await career.locator('.section-heading').boundingBox())!
+    const timeline = (await career.getByRole('list', { name: 'Experiencia profesional' }).boundingBox())!
+    expect(timeline.x).toBeCloseTo(heading.x, 0)
+    expect(timeline.width).toBeCloseTo(heading.width, 0)
+    const careerTitle = career.getByRole('heading', { level: 2 })
+    const profileTitle = page.getByRole('region', { name: 'Perfil profesional' }).getByRole('heading', { level: 2 })
+    expect(await careerTitle.evaluate((element) => parseFloat(getComputedStyle(element).fontSize)))
+      .toBeGreaterThan(await profileTitle.evaluate((element) => parseFloat(getComputedStyle(element).fontSize)))
+
+    for (const entry of await career.getByRole('article').all()) {
+      const masthead = (await entry.locator('header').boundingBox())!
+      const achievements = (await entry.getByRole('list').boundingBox())!
+      if (width > 600) {
+        expect(achievements.x).toBeGreaterThanOrEqual(masthead.x + masthead.width)
+      } else {
+        expect(achievements.y).toBeGreaterThanOrEqual(masthead.y + masthead.height)
+      }
+    }
+
+    const groups = skills.getByRole('region')
+    await expect(groups).toHaveCount(5)
+    const firstGroup = (await groups.nth(0).boundingBox())!
+    const secondGroup = (await groups.nth(1).boundingBox())!
+    const degrees = education.getByRole('article')
+    const firstDegree = (await degrees.nth(0).boundingBox())!
+    const secondDegree = (await degrees.nth(1).boundingBox())!
+    if (width > 600) {
+      expect(secondGroup.y).toBeCloseTo(firstGroup.y, 0)
+      expect(secondDegree.y).toBeCloseTo(firstDegree.y, 0)
+    } else {
+      expect(secondGroup.y).toBeGreaterThanOrEqual(firstGroup.y + firstGroup.height)
+      expect(secondDegree.y).toBeGreaterThanOrEqual(firstDegree.y + firstDegree.height)
+    }
+    await expect(certifications.locator('time')).toHaveCount(1)
+    await expect(certifications.getByRole('article').nth(1).locator('time')).toHaveCount(0)
+    for (const selector of ['#perfil', '#experiencia', '#habilidades', '#formacion', '#certificaciones']) {
+      const section = page.locator(selector)
+      await expect(section).toHaveCSS('opacity', '1')
+      const bounds = (await section.boundingBox())!
+      expect(bounds.x).toBeGreaterThanOrEqual(0)
+      expect(bounds.x + bounds.width).toBeLessThanOrEqual(width)
+    }
+    expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(width)
+  }
+})
+
 test('normal motion uses a subtle one-shot reveal without hiding or translating text', async ({ page }) => {
   await page.emulateMedia({ reducedMotion: 'no-preference' })
   await page.reload()

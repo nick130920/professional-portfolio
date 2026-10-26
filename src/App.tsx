@@ -195,7 +195,7 @@ export default function App() {
           </div>
         </section>
 
-        <section id="experiencia" data-reveal className="section" aria-labelledby="experience-title">
+        <section id="experiencia" data-reveal className="section career" aria-labelledby="experience-title">
           <div className="section-heading">
             <p className="eyebrow">02 / Trayectoria</p>
             <h2 id="experience-title">Experiencia profesional</h2>
@@ -204,14 +204,16 @@ export default function App() {
             {experience.map(({ id, company, role, location, start, end, achievements }) => (
               <li className="timeline-entry" key={id}>
                 <article aria-labelledby={`${id}-title`}>
-                  <p className="entry-date">
-                    <time dateTime={start.dateTime}>{start.label}</time>
-                    {' – '}
-                    {end ? <time dateTime={end.dateTime}>{end.label}</time> : <span>presente</span>}
-                  </p>
-                  <h3 id={`${id}-title`}>{company}</h3>
-                  <p className="entry-role">{role}</p>
-                  <p className="entry-location">{location}</p>
+                  <header className="entry-masthead" role="group" aria-labelledby={`${id}-title`}>
+                    <p className="entry-date">
+                      <time dateTime={start.dateTime}>{start.label}</time>
+                      {' – '}
+                      {end ? <time dateTime={end.dateTime}>{end.label}</time> : <span>presente</span>}
+                    </p>
+                    <h3 id={`${id}-title`}>{company}</h3>
+                    <p className="entry-role">{role}</p>
+                    <p className="entry-location">{location}</p>
+                  </header>
                   <ul className="achievements">
                     {achievements.map((achievement) => <li key={achievement}>{achievement}</li>)}
                   </ul>
@@ -221,24 +223,24 @@ export default function App() {
           </ol>
         </section>
 
-        <section id="habilidades" data-reveal className="section" aria-labelledby="skills-title">
+        <section id="habilidades" data-reveal className="section expertise" aria-labelledby="skills-title">
           <div className="section-heading">
             <p className="eyebrow">03 / Conocimientos</p>
             <h2 id="skills-title">Habilidades técnicas</h2>
           </div>
           <div className="skill-groups">
             {skillGroups.map(({ id, name, items }) => (
-              <div className="skill-group" key={id}>
+              <section className="skill-group" key={id} aria-labelledby={`${id}-title`}>
                 <h3 id={`${id}-title`}>{name}</h3>
                 <ul className="skill-list" role="list" aria-labelledby={`${id}-title`}>
                   {items.map((item) => <li key={item}>{item}</li>)}
                 </ul>
-              </div>
+              </section>
             ))}
           </div>
         </section>
 
-        <section id="formacion" data-reveal className="section" aria-labelledby="education-title">
+        <section id="formacion" data-reveal className="section education" aria-labelledby="education-title">
           <div className="section-heading">
             <p className="eyebrow">04 / Formación académica</p>
             <h2 id="education-title">Educación</h2>
@@ -255,7 +257,7 @@ export default function App() {
           </div>
         </section>
 
-        <section id="certificaciones" data-reveal className="section" aria-labelledby="certifications-title">
+        <section id="certificaciones" data-reveal className="section certifications" aria-labelledby="certifications-title">
           <div className="section-heading">
             <p className="eyebrow">05 / Formación complementaria</p>
             <h2 id="certifications-title">Certificaciones y cursos</h2>
