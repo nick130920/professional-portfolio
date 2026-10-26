@@ -62,6 +62,45 @@ Each full `npm run build` replaces `dist/` using Vite's default output cleaning,
 
 Prefer revalidation/short caching for `index.html` and long-lived immutable caching for hashed `/assets/` files. Revalidate the favicon when changing its design.
 
+## Run the production container
+
+Docker builds with `node:22-alpine` using `npm ci` and `npm run build`, then copies only `dist/` into `nginxinc/nginx-unprivileged:1.28.2-alpine`. The runtime has no Node process or source tree, runs as UID/GID `101:101`, and listens on unprivileged port **8080**. Image tags are explicit (nginx uses the stable 1.28 release line), but not digest-locked; rebuilding later can include base-image updates.
+
+1. Build from the repository root:
+   ```sh
+   docker build -t nicolasm-portfolio:verify .
+   ```
+2. Start on loopback for local verification:
+   ```sh
+   docker run --rm -d --name nicolasm-portfolio-verify -p 127.0.0.1:18080:8080 nicolasm-portfolio:verify
+   ```
+3. Verify health, headers, and prerendered content:
+   ```sh
+   curl -fsS http://127.0.0.1:18080/health
+   curl -fsSI http://127.0.0.1:18080/
+   curl -fsS http://127.0.0.1:18080/ | grep -F 'Nicolás Andrés'
+   docker inspect --format '{{.State.Health.Status}}' nicolasm-portfolio-verify
+   ```
+   Health returns `ok`; Docker reports `healthy` after its first scheduled check (up to 30 seconds). The image checks `/health` every 30 seconds. Health validates nginx responsiveness; the content check separately validates the build.
+4. Stop the test container, including after any failed check:
+   ```sh
+   docker stop nicolasm-portfolio-verify
+   ```
+
+`nginx.conf` serves SVG with the standard `image/svg+xml` MIME type, revalidates HTML and the favicon (`Cache-Control: no-cache`), and caches existing Vite-hashed `/assets/` files for one year with `immutable` on 200/206/304 responses only. Extensionless paths fall back to `index.html`; missing assets and file-like paths return 404 instead of portfolio HTML, with `no-cache` even when the filename looks hashed. Baseline headers disable MIME sniffing and framing, limit referrer disclosure, and suppress the nginx version. HTTPS termination belongs to the deployment proxy.
+
+### Deploy with Dokploy / Docker Swarm
+
+| Setting | Value |
+| --- | --- |
+| Source | This public Git repository, branch `feat/professional-portfolio` (publish the deployment commit before deploying). |
+| Build type | **Dockerfile**, path `Dockerfile`, build/context directory repository root (`.`); no separate publish directory or build command. |
+| Runtime | Container port **8080** over HTTP; use Dokploy's proxy/service networking, not the local `18080` host binding. No environment variables, persistent volumes, or privileged mode required. |
+| Health | Image `HEALTHCHECK` calls `http://127.0.0.1:8080/health`; use `/health` on port 8080 for any additional Dokploy health check. |
+| Domain | Verify the service first with a temporary Dokploy route or direct service check, then attach `nicolasm.pro` to port 8080, path `/`, with HTTPS enabled. |
+
+Keep the current Railway destination until the Dokploy container is healthy **and** its route serves the expected `Nicolás Andrés` content, favicon, assets, and headers. Only then change the domain/DNS destination, verify public HTTPS and portfolio behavior, and retire the fallback. Domain and DNS mutations are separate from this local build; the Dockerfile does not perform them. Avoid publishing port 8080 directly on the VPS when Dokploy's proxy already routes to it.
+
 ## Content and accessibility
 
 - Keep product copy in neutral, professional Spanish. Do not add claims, dates, metrics, or credentials without a verified source.
@@ -76,7 +115,8 @@ Prefer revalidation/short caching for `index.html` and long-lived immutable cach
 | --- | --- |
 | `src/App.tsx`, `src/main.tsx` | Verified CV content, semantic sections, optional interaction, and hydration entry point. |
 | `src/styles.css`, `public/favicon.svg` | Responsive/reduced-motion/print styles and authored `nm.` vector mark. |
-| `src/App.test.tsx`, `src/test/` | Component/metadata tests, test setup, and build-time prerender helper. |
+| `src/App.test.tsx`, `src/test/` | Component/metadata/deployment tests, test setup, and build-time prerender helper. |
+| `Dockerfile`, `.dockerignore`, `nginx.conf` | Production build, filtered build context, and unprivileged static server configuration. |
 | `e2e/portfolio.spec.ts`, `playwright.config.ts` | Chromium browser coverage and desktop/mobile configuration. |
 | `index.html`, `dist/`, `odd/tasks/` | Metadata template, deployable generated output, and project task records. |
 

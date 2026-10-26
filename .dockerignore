@@ -1,0 +1,14 @@
+node_modules
+dist
+.git
+.env
+.env.*
+*.pem
+*.key
+.npmrc
+coverage
+test-results
+playwright-report
+odd
+e2e
+*.log
