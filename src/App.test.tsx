@@ -65,6 +65,22 @@ describe('Portfolio foundation', () => {
       .toHaveAttribute('href', 'mailto:namc1309@gmail.com')
   })
 
+  it('grounds the editorial hero markers in the existing career facts', () => {
+    render(<App />)
+
+    const hero = screen.getByRole('region', { name: identity })
+    expect(within(hero).getByText('Portafolio profesional')).toBeVisible()
+    expect(within(hero).getByText('04 experiencias')).toBeVisible()
+    const currentRole = within(hero).getByRole('complementary', { name: 'Actividad actual' })
+    const career = screen.getByRole('article', { name: 'Ceiba Software - Mercado Libre' })
+    for (const fact of ['Ceiba Software - Mercado Libre', 'Arquitecto Desarrollador Golang']) {
+      expect(within(currentRole).getByText(fact, { exact: true })).toBeVisible()
+      expect(career).toHaveTextContent(fact)
+    }
+    expect(within(currentRole).getByText('Jun 2025')).toHaveAttribute('datetime', '2025-06')
+    expect(currentRole).toHaveTextContent('presente')
+  })
+
   it('provides semantic landmarks, a skip link, and working internal navigation', () => {
     render(<App />)
 

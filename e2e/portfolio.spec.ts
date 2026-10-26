@@ -89,6 +89,30 @@ test('production HTML hydrates without errors and enhances native navigation', a
   expect(errors).toEqual([])
 })
 
+test('editorial identity keeps the current role factual and the hero composition responsive', async ({ page }) => {
+  const hero = page.getByRole('region', { name: 'Nicolás Andrés Muñoz Coronado', exact: true })
+  const currentRole = hero.getByRole('complementary', { name: 'Actividad actual' })
+  await expect(hero.getByText('Portafolio profesional', { exact: true })).toBeVisible()
+  await expect(hero.getByText('04 experiencias', { exact: true })).toBeVisible()
+  await expect(currentRole.getByText('Arquitecto Desarrollador Golang', { exact: true })).toBeVisible()
+  await expect(currentRole.getByText('Ceiba Software - Mercado Libre', { exact: true })).toBeVisible()
+  await expect(currentRole.locator('time')).toHaveAttribute('datetime', '2025-06')
+  await expect(currentRole).toContainText('Jun 2025 – presente')
+
+  for (const width of [1440, 850, 375, 320]) {
+    await page.setViewportSize({ width, height: 900 })
+    const copy = (await hero.locator('.hero-copy').boundingBox())!
+    const note = (await currentRole.boundingBox())!
+    if (width > 850) {
+      expect(note.x).toBeGreaterThan(copy.x + copy.width)
+    } else {
+      expect(note.y).toBeGreaterThanOrEqual(copy.y + copy.height)
+    }
+    expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(width)
+    await expect(currentRole).toBeVisible()
+  }
+})
+
 test('normal motion uses a subtle one-shot reveal without hiding or translating text', async ({ page }) => {
   await page.emulateMedia({ reducedMotion: 'no-preference' })
   await page.reload()
@@ -133,7 +157,7 @@ test('reduced motion keeps every section visible with no reveal animation or tra
 
 test('print media is a readable CV with contact details but no navigation or decorative actions', async ({ page }) => {
   await page.emulateMedia({ media: 'print' })
-  for (const selector of ['.site-header', '.skip-link', '.hero-actions', '.hero-note', '.site-footer']) {
+  for (const selector of ['.site-header', '.skip-link', '.hero-masthead', '.hero-actions', '.hero-note', '.site-footer']) {
     await expect(page.locator(selector)).toHaveCSS('display', 'none')
   }
   await expect(page.locator('body')).toHaveCSS('background-color', 'rgb(255, 255, 255)')

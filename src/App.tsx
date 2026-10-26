@@ -132,7 +132,8 @@ export default function App() {
 
       <header className="site-header shell">
         <a className="wordmark" href="#inicio" aria-label="Nicolás Muñoz · Inicio">
-          nm<span aria-hidden="true">.</span>
+          <span className="wordmark-monogram">nm<span aria-hidden="true">.</span></span>
+          <span className="wordmark-caption">Software &amp;<br />arquitectura</span>
         </a>
         <nav aria-label="Navegación principal">
           {navigation.map(([id, label]) => (
@@ -145,6 +146,10 @@ export default function App() {
 
       <main ref={mainRef} id="main-content" className="shell" tabIndex={-1}>
         <section id="inicio" className="hero" aria-labelledby="hero-title">
+          <div className="hero-masthead">
+            <p className="eyebrow">Portafolio profesional</p>
+            <p className="eyebrow">{String(experience.length).padStart(2, '0')} experiencias</p>
+          </div>
           <div className="hero-copy">
             <p className="eyebrow">Ingeniería de software · Arquitectura</p>
             <h1 id="hero-title">Nicolás Andrés<br />Muñoz Coronado<span className="accent" aria-hidden="true">.</span></h1>
@@ -162,11 +167,13 @@ export default function App() {
               </a>
             </div>
           </div>
-          <div className="hero-note" aria-hidden="true">
-            <span className="note-rule" />
-            <p>Una visión integral.<br />Del código a la arquitectura.</p>
-            <span className="note-index">01 / PERFIL</span>
-          </div>
+          <aside className="hero-note" aria-label="Actividad actual">
+            <p className="eyebrow">Actualmente</p>
+            <p className="note-role">{experience[0].role}</p>
+            <p className="note-company">{experience[0].company}</p>
+            <p className="note-date"><time dateTime={experience[0].start.dateTime}>{experience[0].start.label}</time> – presente</p>
+            <p className="note-index">Backend / Frontend / Móvil</p>
+          </aside>
         </section>
 
         <section id="perfil" data-reveal className="section profile" aria-labelledby="profile-title">
