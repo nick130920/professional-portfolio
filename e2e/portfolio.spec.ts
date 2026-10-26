@@ -167,6 +167,67 @@ test('career and expertise use distinct editorial layouts without changing readi
   }
 })
 
+test('narrow navigation and contact links provide complete unclipped touch targets', async ({ page }) => {
+  for (const width of [1440, 1000, 850, 600, 480, 375, 320]) {
+    await page.setViewportSize({ width, height: 900 })
+    const navigation = page.getByRole('navigation')
+    await expect(navigation.getByRole('listitem')).toHaveCount(7)
+    for (const link of await navigation.getByRole('link').all()) {
+      const bounds = (await link.boundingBox())!
+      expect(bounds.height).toBeGreaterThanOrEqual(44)
+      expect(bounds.x).toBeGreaterThanOrEqual(5)
+      expect(bounds.x + bounds.width).toBeLessThanOrEqual(width - 5)
+      await expect(link).toBeVisible()
+    }
+    if (width <= 480) {
+      const links = navigation.getByRole('link')
+      const first = (await links.nth(0).boundingBox())!
+      const second = (await links.nth(1).boundingBox())!
+      const third = (await links.nth(2).boundingBox())!
+      expect(second.y).toBeCloseTo(first.y, 0)
+      expect(third.y).toBeGreaterThanOrEqual(first.y + first.height)
+      expect(second.x).toBeGreaterThanOrEqual(first.x + first.width)
+    }
+    const contactLinks = page.locator('#contacto address a')
+    await expect(contactLinks).toHaveCount(5)
+    expect(await contactLinks.evaluateAll((links) => links.map((link) => link.getAttribute('href')))).toEqual(contactHrefs)
+    for (const link of await contactLinks.all()) {
+      expect((await link.boundingBox())!.height).toBeGreaterThanOrEqual(48)
+      await expect(link.locator('.contact-value')).toHaveCSS('overflow-wrap', 'anywhere')
+    }
+    const footer = page.getByRole('contentinfo')
+    await expect(footer.getByText('Portafolio profesional')).toBeVisible()
+    expect((await footer.getByRole('link').boundingBox())!.height).toBeGreaterThanOrEqual(44)
+    expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(width)
+  }
+})
+
+test('contact interactions never shift text and live reduced motion removes transitions', async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: 'no-preference' })
+  const link = page.locator('#contacto a').first()
+  const value = link.locator('.contact-value')
+  await link.scrollIntoViewIfNeeded()
+  const before = (await value.boundingBox())!
+  await link.hover()
+  await expect(link).toHaveCSS('transition-duration', '0.15s, 0.15s')
+  await expect(value).toHaveCSS('text-decoration-line', 'underline')
+  expect(await value.boundingBox()).toEqual(before)
+  await expect(value).toHaveCSS('opacity', '1')
+  await expect(value).toHaveCSS('transform', 'none')
+  await page.emulateMedia({ reducedMotion: 'reduce' })
+  for (const selector of ['nav a', '.button', '#contacto a', '.site-footer a']) {
+    for (const target of await page.locator(selector).all()) {
+      await expect(target).toHaveCSS('transition-duration', '0s')
+      await expect(target).toHaveCSS('animation-name', 'none')
+      await expect(target).toHaveCSS('transform', 'none')
+    }
+  }
+  await expect(value).toHaveCSS('text-decoration-line', 'underline')
+  expect(await value.boundingBox()).toEqual(before)
+  await page.emulateMedia({ reducedMotion: 'no-preference' })
+  await expect(link).toHaveCSS('transition-duration', '0.15s, 0.15s')
+})
+
 test('normal motion uses a subtle one-shot reveal without hiding or translating text', async ({ page }) => {
   await page.emulateMedia({ reducedMotion: 'no-preference' })
   await page.reload()
@@ -230,7 +291,16 @@ test('print media is a readable CV with contact details but no navigation or dec
   await expect(page.locator('h2').first()).toHaveCSS('break-after', 'avoid')
   await expect(page.locator('.contact-row a')).toHaveCount(5)
   await expect(page.locator('.contact-row a').first()).toBeVisible()
+  expect(await page.locator('.contact-row a').evaluateAll((links) => links.map((link) => link.getAttribute('href')))).toEqual(contactHrefs)
+  for (const value of await page.locator('.contact-value').all()) await expect(value).toBeVisible()
+  for (const arrow of await page.locator('.contact-row a [aria-hidden]').all()) await expect(arrow).toBeHidden()
   await expect(page.locator('.achievements').first()).toHaveCSS('font-size', '13.3333px')
+  // Keep the PDF in memory: verify the actual CSS-selected A4 paper size.
+  const pdf = await page.pdf({ preferCSSPageSize: true })
+  const mediaBox = pdf.toString('latin1').match(/\/MediaBox\s*\[0 0 ([\d.]+) ([\d.]+)\]/)
+  expect(mediaBox).not.toBeNull()
+  expect(Math.abs(Number(mediaBox![1]) - 595.28)).toBeLessThan(1)
+  expect(Math.abs(Number(mediaBox![2]) - 841.89)).toBeLessThan(1)
 })
 
 test('all portfolio sections remain readable without horizontal overflow', async ({ page }) => {

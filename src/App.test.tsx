@@ -38,6 +38,40 @@ describe('Progressive enhancement', () => {
     expect(document.activeElement).toBe(document.body)
   })
 
+  it('stops, restarts, and cleans up enhancement when the motion preference changes live', () => {
+    let changeMotion: (() => void) | undefined
+    const preference = {
+      matches: true,
+      addEventListener: vi.fn((_event: string, listener: () => void) => { changeMotion = listener }),
+      removeEventListener: vi.fn(),
+    }
+    const observers: { observe: ReturnType<typeof vi.fn>; disconnect: ReturnType<typeof vi.fn> }[] = []
+    vi.stubGlobal('matchMedia', () => preference)
+    vi.stubGlobal('IntersectionObserver', class {
+      observe = vi.fn()
+      disconnect = vi.fn()
+      constructor() { observers.push(this) }
+    })
+    const { unmount } = render(<App />)
+    expect(observers[0].observe).toHaveBeenCalledTimes(6)
+    const contact = screen.getByRole('region', { name: 'Contacto' })
+    contact.setAttribute('data-revealed', 'true')
+
+    preference.matches = false
+    changeMotion!()
+    expect(observers[0].disconnect).toHaveBeenCalledOnce()
+    expect(document.querySelector('[data-revealed]')).toBeNull()
+    expect(observers).toHaveLength(1)
+
+    preference.matches = true
+    changeMotion!()
+    expect(observers).toHaveLength(2)
+    expect(observers[1].observe).toHaveBeenCalledTimes(6)
+    unmount()
+    expect(observers[1].disconnect).toHaveBeenCalledOnce()
+    expect(preference.removeEventListener).toHaveBeenCalledWith('change', changeMotion)
+  })
+
   it('does not start reveal observation when reduced motion is requested', () => {
     const observer = vi.fn()
     vi.stubGlobal('IntersectionObserver', observer)
@@ -268,6 +302,36 @@ describe('Portfolio foundation', () => {
       level: 3, name: 'Cursos Platzi: Golang Básico, Golang Intermedio (Concurrencia y POO)',
     })).toBeVisible()
     expect(courses[1].querySelector('time')).toBeNull()
+  })
+
+  it('groups native navigation as a complete list and identifies the editorial footer', () => {
+    render(<App />)
+
+    const navigation = screen.getByRole('navigation', { name: 'Navegación principal' })
+    const items = within(navigation).getAllByRole('listitem')
+    expect(items).toHaveLength(7)
+    for (const item of items) expect(within(item).getByRole('link')).toHaveAttribute('href', expect.stringMatching(/^#/))
+    const footer = screen.getByRole('contentinfo')
+    expect(within(footer).getByText('Portafolio profesional')).toBeVisible()
+    expect(within(footer).getByText(identity)).toBeVisible()
+    expect(within(footer).getByRole('link', { name: 'Volver al inicio' })).toHaveAttribute('href', '#inicio')
+  })
+
+  it('marks owner contact information with paired channel labels and decorative arrows', () => {
+    render(<App />)
+
+    const contact = screen.getByRole('region', { name: 'Contacto' })
+    const address = contact.querySelector('address')
+    expect(address).not.toBeNull()
+    if (!address) throw new Error('Missing owner contact information')
+    expect(address.querySelector('dl')).not.toBeNull()
+    expect([...address.querySelectorAll('dt')].map((label) => label.textContent))
+      .toEqual(['Correo', 'Teléfono', 'LinkedIn', 'GitHub', 'Sitio web'])
+    expect(within(address).getAllByRole('link')).toHaveLength(5)
+    for (const row of address.querySelectorAll('.contact-row')) {
+      expect(row.querySelector('dt + dd a .contact-value')).not.toBeNull()
+      expect(row.querySelector('a [aria-hidden="true"]')).toHaveTextContent('↗')
+    }
   })
 
   it('exposes all five contact channels with exact labels and valid destinations', () => {

@@ -32,14 +32,14 @@ Transform the existing professional portfolio into a distinctive editorial-techn
 - [x] Improve scanability of roles, dates, locations, achievements, and skill groups.
 - [x] Give profile, education, and certifications distinct editorial rhythms without altering content.
 - Verification: 14 component tests and 22 Chromium checks passed; production build and prerender completed; exact Spanish CV and contact content remained unchanged; responsive checks passed at 1440, 1000, 850, 600, 375, and 320 px; keyboard, reduced-motion, print, JavaScript-disabled, and diff checks passed.
-- Commit evidence: pending local work-unit commit.
+- Commit evidence: `08be169` (`feat: reframe portfolio career narrative`).
 
 ### DESIGN-003 — Polish responsive delivery
-- [ ] Refine contact, footer, micro-interactions, and narrow-screen navigation.
-- [ ] Confirm reduced-motion, keyboard focus, JavaScript-disabled reading, and print output.
-- [ ] Run the complete component, metadata, production-build, audit, and Chromium verification suite.
-- Verification: full automated suite plus public-ready production build.
-- Commit evidence: pending.
+- [x] Refine contact, footer, micro-interactions, and narrow-screen navigation.
+- [x] Confirm reduced-motion, keyboard focus, JavaScript-disabled reading, and print output.
+- [x] Run the complete component, metadata, production-build, audit, and Chromium verification suite.
+- Verification: 17 component tests and 26 Chromium checks passed; TypeScript, production build, prerender, hydration, exact contact targets, keyboard navigation, live reduced-motion changes, responsive checks from 320 to 1440 px, A4 print dimensions, JavaScript-disabled reading, and `git diff --check` passed; production and full npm audits reported zero vulnerabilities.
+- Commit evidence: pending local work-unit commit.
 
 ## Acceptance Criteria
 1. The result has a cohesive editorial-technology identity rather than repeated generic two-column sections.
@@ -52,4 +52,4 @@ Transform the existing professional portfolio into a distinctive editorial-techn
 A complete visual redesign will likely exceed 400 changed lines across markup, styles, and browser assertions. The user previously selected single-PR delivery for this portfolio; preserve cohesive work-unit commits and report the final review size explicitly.
 
 ## Next Step
-Implement DESIGN-002 to reframe career history, skills, education, and certifications with distinct editorial rhythms.
+Run the native review flow for the completed redesign candidate, then decide whether to push and deploy the three local work-unit commits.

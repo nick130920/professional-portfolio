@@ -136,11 +136,15 @@ export default function App() {
           <span className="wordmark-caption">Software &amp;<br />arquitectura</span>
         </a>
         <nav aria-label="Navegación principal">
-          {navigation.map(([id, label]) => (
-            <a key={id} href={`#${id}`} aria-current={currentSection === id ? 'location' : undefined}>
-              {label}
-            </a>
-          ))}
+          <ul role="list">
+            {navigation.map(([id, label]) => (
+              <li key={id}>
+                <a href={`#${id}`} aria-current={currentSection === id ? 'location' : undefined}>
+                  {label}
+                </a>
+              </li>
+            ))}
+          </ul>
         </nav>
       </header>
 
@@ -280,21 +284,29 @@ export default function App() {
             <h2 id="contact-title">Contacto</h2>
             <p>Hablemos de software y arquitectura.</p>
           </div>
-          <dl className="contact-list">
-            {contacts.map(({ label, text, href }) => (
-              <div className="contact-row" key={label}>
-                <dt>{label}</dt>
-                <dd>
-                  <a href={href}>{text}<span aria-hidden="true">↗</span></a>
-                </dd>
-              </div>
-            ))}
-          </dl>
+          <address className="contact-details">
+            <dl className="contact-list">
+              {contacts.map(({ label, text, href }) => (
+                <div className="contact-row" key={label}>
+                  <dt>{label}</dt>
+                  <dd>
+                    <a href={href}>
+                      <span className="contact-value">{text}</span>
+                      <span aria-hidden="true">↗</span>
+                    </a>
+                  </dd>
+                </div>
+              ))}
+            </dl>
+          </address>
         </section>
       </main>
 
       <footer className="site-footer shell">
-        <p>Nicolás Andrés Muñoz Coronado</p>
+        <div className="footer-signature">
+          <p className="eyebrow">Portafolio profesional</p>
+          <p>Nicolás Andrés Muñoz Coronado</p>
+        </div>
         <a href="#inicio">Volver al inicio <span aria-hidden="true">↑</span></a>
       </footer>
     </>
