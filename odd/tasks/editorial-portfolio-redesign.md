@@ -39,7 +39,7 @@ Transform the existing professional portfolio into a distinctive editorial-techn
 - [x] Confirm reduced-motion, keyboard focus, JavaScript-disabled reading, and print output.
 - [x] Run the complete component, metadata, production-build, audit, and Chromium verification suite.
 - Verification: 17 component tests and 26 Chromium checks passed; TypeScript, production build, prerender, hydration, exact contact targets, keyboard navigation, live reduced-motion changes, responsive checks from 320 to 1440 px, A4 print dimensions, JavaScript-disabled reading, and `git diff --check` passed; production and full npm audits reported zero vulnerabilities.
-- Commit evidence: pending local work-unit commit.
+- Commit evidence: `656df85` (`feat: polish responsive portfolio delivery`).
 
 ## Acceptance Criteria
 1. The result has a cohesive editorial-technology identity rather than repeated generic two-column sections.
@@ -51,5 +51,11 @@ Transform the existing professional portfolio into a distinctive editorial-techn
 ## Review Workload
 A complete visual redesign will likely exceed 400 changed lines across markup, styles, and browser assertions. The user previously selected single-PR delivery for this portfolio; preserve cohesive work-unit commits and report the final review size explicitly.
 
+## Native Review
+- Candidate: committed range after `5627a1cd07faf3f21df2903d487c82b1f0f371e0`.
+- Inspect resolved target `sha256:b1c0a7dad8a0e68fbfecd859ff8e0d710d2c58ad6ae7cd3eda7526023af516ea`.
+- Start did not create a lineage: native operation returned `identity-mismatch` with `mutation_performed: false`.
+- Independent verification remains the available evidence; no recovery or authority mutation was attempted.
+
 ## Next Step
-Run the native review flow for the completed redesign candidate, then decide whether to push and deploy the three local work-unit commits.
+Decide whether to push the local redesign commits and deploy them to Dokploy, with the native review failure disclosed.
