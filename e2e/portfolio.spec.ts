@@ -52,6 +52,7 @@ test('production HTML stays readable and navigable with JavaScript disabled', as
     await expect(page).toHaveTitle('Nicolás Muñoz | Ingeniero de Software Full-Stack y Arquitecto Desarrollador')
     await expect(page.locator('link[rel="canonical"]')).toHaveAttribute('href', 'https://nicolasm.pro/')
     await expect(page.getByRole('heading', { level: 1 })).toBeVisible()
+    await expect(page.getByText('Arquitectura y desarrollo full-stack para sistemas financieros y e-commerce.', { exact: true })).toBeVisible()
     await expect(page.locator('[data-reveal]')).toHaveCount(6)
     await expect(page.locator('.achievements li')).toHaveCount(13)
     for (const point of await page.locator('.achievements li').all()) await expect(point).toBeVisible()
@@ -86,6 +87,7 @@ test('production HTML hydrates without errors and enhances native navigation', a
   })
   await page.goto('/')
   await expect(page.locator('.achievements li:visible')).toHaveCount(8)
+  await expect(page.getByText('Arquitectura y desarrollo full-stack para sistemas financieros y e-commerce.', { exact: true })).toBeVisible()
   await expect(page.getByRole('button', { expanded: false })).toHaveCount(4)
   const prerendered = await page.evaluate((html) => {
     const document = new DOMParser().parseFromString(html, 'text/html')
@@ -196,6 +198,85 @@ test('editorial identity keeps the current role factual and the hero composition
     expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(width)
     await expect(currentRole).toBeVisible()
   }
+})
+
+test('positioning has quiet visual isolation, readable contrast, and no new keyboard or motion behavior', async ({ page }) => {
+  const statement = page.getByText('Arquitectura y desarrollo full-stack para sistemas financieros y e-commerce.', { exact: true })
+  await expect(statement).toHaveCount(1)
+  const hero = page.locator('#inicio')
+  const profile = page.locator('#perfil')
+  const primary = hero.getByRole('link', { name: 'Contactar por correo' })
+
+  for (const width of [1440, 1000, 850, 600, 480, 375, 320]) {
+    await page.setViewportSize({ width, height: 900 })
+    await expect(statement).toBeVisible()
+    const band = (await statement.boundingBox())!
+    const heroBounds = (await hero.boundingBox())!
+    const profileBounds = (await profile.boundingBox())!
+    const actionBounds = (await primary.boundingBox())!
+    expect(band.y).toBeGreaterThanOrEqual(heroBounds.y + heroBounds.height)
+    expect(band.y).toBeGreaterThanOrEqual(actionBounds.y + actionBounds.height + 48)
+    expect(profileBounds.y).toBeGreaterThanOrEqual(band.y + band.height + 32)
+    expect(band.x).toBeGreaterThanOrEqual(20)
+    expect(band.x + band.width).toBeLessThanOrEqual(width - 20)
+    await expect(statement).toHaveCSS('background-color', 'rgb(239, 238, 231)')
+    await expect(statement).toHaveCSS('color', 'rgb(24, 37, 43)')
+    await expect(primary).toHaveCSS('background-color', 'rgb(23, 77, 195)')
+    const readability = await statement.evaluate((element) => {
+      const style = getComputedStyle(element)
+      const range = document.createRange()
+      range.selectNodeContents(element)
+      const box = element.getBoundingClientRect()
+      const luminance = (color: string) => {
+        const [r, g, b] = color.match(/[\d.]+/g)!.slice(0, 3).map(Number).map((value) => {
+          const channel = value / 255
+          return channel <= 0.04045 ? channel / 12.92 : ((channel + 0.055) / 1.055) ** 2.4
+        })
+        return r * 0.2126 + g * 0.7152 + b * 0.0722
+      }
+      const foreground = luminance(style.color)
+      const background = luminance(style.backgroundColor)
+      return {
+        contrast: (Math.max(foreground, background) + 0.05) / (Math.min(foreground, background) + 0.05),
+        fits: [...range.getClientRects()].every((rect) => rect.left >= box.left && rect.right <= box.right),
+        fontSize: parseFloat(style.fontSize),
+        fontFamily: style.fontFamily,
+        editorial: style.getPropertyValue('--editorial').trim(),
+      }
+    })
+    expect(readability.contrast).toBeGreaterThanOrEqual(4.5)
+    expect(readability.fits).toBe(true)
+    expect(readability.fontFamily).toBe(readability.editorial)
+    expect(readability.fontSize).toBeLessThan(await hero.locator('h1').evaluate((element) => parseFloat(getComputedStyle(element).fontSize)))
+    expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(width)
+  }
+
+  // No added stop between the existing secondary hero action and career controls.
+  await hero.getByRole('link', { name: 'Conocer mi perfil' }).focus()
+  await page.keyboard.press('Tab')
+  await expectVisibleFocus(page.locator('.achievement-toggle').first())
+  for (const motion of ['no-preference', 'reduce', 'no-preference'] as const) {
+    await page.emulateMedia({ reducedMotion: motion })
+    await statement.scrollIntoViewIfNeeded()
+    await expect(statement).toHaveCSS('animation-name', 'none')
+    await expect(statement).toHaveCSS('transition-duration', '0s')
+    await expect(statement).toHaveCSS('opacity', '1')
+    await expect(statement).toHaveCSS('transform', 'none')
+    await expect(statement).not.toHaveAttribute('data-revealed')
+  }
+})
+
+test('print omits the redundant positioning band while retaining its source CV facts', async ({ page }) => {
+  const statement = page.getByText('Arquitectura y desarrollo full-stack para sistemas financieros y e-commerce.', { exact: true })
+  await expect(statement).toBeVisible()
+  await page.emulateMedia({ media: 'print' })
+  await expect(statement).toHaveCSS('display', 'none')
+  await expect(page.locator('.positioning')).toBeVisible()
+  await expect(page.locator('.hero-summary')).toContainText('financiero y e-commerce')
+  await expect(page.locator('.profile-copy .lead')).toBeVisible()
+  await expect(page.locator('.profile-copy .lead')).toHaveText('Desarrollo full-stack con perspectiva de arquitectura.')
+  await page.emulateMedia({ media: 'screen' })
+  await expect(statement).toBeVisible()
 })
 
 test('career and expertise use distinct editorial layouts without changing reading order', async ({ page }) => {

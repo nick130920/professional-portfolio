@@ -23,14 +23,14 @@ Apply the two highest-impact findings from the Laws of UX audit without changing
 - [x] Add accessible per-role controls for revealing and hiding remaining achievements.
 - [x] Keep all achievements visible without JavaScript and when printing.
 - Verification: observed RED before implementation; 20 component tests and 30 Chromium checks passed; after hydration 8 of 13 achievements are visible; independent keyboard controls, accurate state, focus retention, exact content/order, JavaScript-disabled fallback, collapsed/mixed/expanded print states, responsive overflow, hydration, reduced motion, anchors, and A4 checks passed.
-- Commit evidence: pending local work-unit commit.
+- Commit evidence: `5c20ec9` (`feat: reduce portfolio career scan load`).
 
 ### UX-002 — Isolate the professional differentiator
-- [ ] Add a single editorial statement using only existing facts: architecture and full-stack development for financial and e-commerce systems.
-- [ ] Give the statement a distinct but restrained visual treatment consistent with the current design system.
-- [ ] Verify that it improves visual prioritization without competing with the primary hero action.
-- Verification: content-source assertion, responsive geometry, contrast, keyboard flow, reduced motion, and production checks.
-- Commit evidence: pending.
+- [x] Add a single editorial statement using only existing facts: architecture and full-stack development for financial and e-commerce systems.
+- [x] Give the statement a distinct but restrained visual treatment consistent with the current design system.
+- [x] Verify that it improves visual prioritization without competing with the primary hero action.
+- Verification: observed RED before implementation; 21 component tests and 34 Chromium checks passed; exact copy/source derivation, uniqueness, semantic order, non-interactivity, responsive geometry from 320 to 1440 px, contrast, keyboard flow, live reduced motion, JavaScript-disabled rendering, intentional print exclusion, build/prerender, hydration, and UX-001 regression coverage passed; both npm audits reported zero vulnerabilities.
+- Commit evidence: pending local work-unit commit.
 
 ## Acceptance Criteria
 1. After hydration, each role initially displays exactly its first two achievements.
@@ -43,4 +43,4 @@ Apply the two highest-impact findings from the Laws of UX audit without changing
 Expected scope is four existing implementation/test files plus this task document. Keep two cohesive local work-unit commits if authorized; push and deployment remain separate decisions.
 
 ## Next Step
-Authorize local work-unit commits, then implement UX-001 test-first.
+Run native review for the two completed UX work units, then decide whether to push and deploy them.

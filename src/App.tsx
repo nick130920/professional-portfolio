@@ -185,6 +185,10 @@ export default function App() {
           </aside>
         </section>
 
+        <p className="editorial-positioning">
+          Arquitectura y desarrollo full-stack para sistemas financieros y e-commerce.
+        </p>
+
         <section id="perfil" data-reveal className="section profile" aria-labelledby="profile-title">
           <div className="section-heading">
             <p className="eyebrow">01 / Sobre mí</p>

@@ -175,6 +175,34 @@ describe('Portfolio foundation', () => {
     expect(currentRole).toHaveTextContent('presente')
   })
 
+  it('isolates one factual positioning statement between the hero and detailed profile', () => {
+    render(<App />)
+
+    const copy = 'Arquitectura y desarrollo full-stack para sistemas financieros y e-commerce.'
+    const statement = screen.getByText(copy, { exact: true })
+    expect(statement.tagName).toBe('P')
+    expect(statement).toBeVisible()
+    expect(statement.previousElementSibling).toBe(screen.getByRole('region', { name: identity }))
+    const profile = screen.getByRole('region', { name: 'Perfil profesional' })
+    expect(statement.nextElementSibling).toBe(profile)
+    expect(statement.parentElement).toBe(screen.getByRole('main'))
+    expect(statement.querySelector('a, button, [tabindex]')).toBeNull()
+    expect(statement).not.toHaveAttribute('tabindex')
+    expect(statement).not.toHaveAttribute('data-reveal')
+
+    // Every concept in the synthesis is already present in the unchanged CV.
+    expect(profile).toHaveTextContent('Desarrollo full-stack con perspectiva de arquitectura.')
+    expect(profile).toHaveTextContent('en los sectores financiero y e-commerce.')
+    expect(screen.getByRole('article', { name: 'Ada S.A' })).toHaveTextContent('sistemas financieros')
+    expect(screen.getByRole('article', { name: 'Yoly Shoes' })).toHaveTextContent('plataforma e-commerce')
+
+    const prerendered = new DOMParser().parseFromString(renderToString(<App />), 'text/html')
+    const staticStatement = prerendered.querySelector('#inicio + p')
+    expect(staticStatement?.textContent).toBe(copy)
+    expect(staticStatement?.nextElementSibling?.id).toBe('perfil')
+    expect(screen.getAllByText(copy, { exact: true })).toHaveLength(1)
+  })
+
   it('provides semantic landmarks, a skip link, and working internal navigation', () => {
     render(<App />)
 
