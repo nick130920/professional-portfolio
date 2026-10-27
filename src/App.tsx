@@ -90,6 +90,11 @@ const education = [
 export default function App() {
   const mainRef = useRef<HTMLElement>(null)
   const [currentSection, setCurrentSection] = useState('inicio')
+  const [enhanced, setEnhanced] = useState(false)
+  const [expandedRoles, setExpandedRoles] = useState<Record<string, boolean>>({})
+
+  // Match the prerender on the first client render; collapse only after hydration.
+  useEffect(() => { setEnhanced(true) }, [])
 
   useEffect(() => {
     const updateLocation = () => setCurrentSection(window.location.hash.slice(1) || 'inicio')
@@ -218,9 +223,24 @@ export default function App() {
                     <p className="entry-role">{role}</p>
                     <p className="entry-location">{location}</p>
                   </header>
-                  <ul className="achievements">
-                    {achievements.map((achievement) => <li key={achievement}>{achievement}</li>)}
+                  <ul id={`${id}-achievements`} className="achievements">
+                    {achievements.map((achievement, index) => (
+                      <li key={achievement} hidden={enhanced && !expandedRoles[id] && index >= 2}>
+                        {achievement}
+                      </li>
+                    ))}
                   </ul>
+                  {enhanced && achievements.length > 2 && (
+                    <button
+                      type="button"
+                      className="button achievement-toggle"
+                      aria-expanded={!!expandedRoles[id]}
+                      aria-controls={`${id}-achievements`}
+                      onClick={() => setExpandedRoles((previous) => ({ ...previous, [id]: !previous[id] }))}
+                    >
+                      {expandedRoles[id] ? 'Mostrar menos logros' : 'Ver todos los logros'} de {company}
+                    </button>
+                  )}
                 </article>
               </li>
             ))}

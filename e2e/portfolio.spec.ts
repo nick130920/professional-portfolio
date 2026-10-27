@@ -53,6 +53,9 @@ test('production HTML stays readable and navigable with JavaScript disabled', as
     await expect(page.locator('link[rel="canonical"]')).toHaveAttribute('href', 'https://nicolasm.pro/')
     await expect(page.getByRole('heading', { level: 1 })).toBeVisible()
     await expect(page.locator('[data-reveal]')).toHaveCount(6)
+    await expect(page.locator('.achievements li')).toHaveCount(13)
+    for (const point of await page.locator('.achievements li').all()) await expect(point).toBeVisible()
+    await expect(page.getByRole('button')).toHaveCount(0)
     for (const section of await page.locator('main > section').all()) {
       await expect(section).toBeVisible()
       await expect(section).toHaveCSS('opacity', '1')
@@ -82,11 +85,93 @@ test('production HTML hydrates without errors and enhances native navigation', a
     }
   })
   await page.goto('/')
+  await expect(page.locator('.achievements li:visible')).toHaveCount(8)
+  await expect(page.getByRole('button', { expanded: false })).toHaveCount(4)
+  const prerendered = await page.evaluate((html) => {
+    const document = new DOMParser().parseFromString(html, 'text/html')
+    return [...document.querySelectorAll('.achievements')].map((list) => [...list.children].map((point) => point.textContent))
+  }, await readFile('dist/index.html', 'utf8'))
+  expect(prerendered.flat()).toHaveLength(13)
+  for (const [index, list] of (await page.locator('.achievements').all()).entries()) {
+    expect(await list.locator('li').allTextContents()).toEqual(prerendered[index])
+    expect(await list.locator('li:visible').allTextContents()).toEqual(prerendered[index].slice(0, 2))
+  }
   const contactLink = page.getByRole('navigation').getByRole('link', { name: 'Contacto', exact: true })
   await contactLink.click()
   await expect(contactLink).toHaveAttribute('aria-current', 'location')
   await expect(page.locator('#contact-title')).toBeInViewport()
   expect(errors).toEqual([])
+})
+
+test('career disclosures support Enter and Space independently with visible focus and responsive targets', async ({ page }) => {
+  const entries = page.locator('.timeline-entry article')
+  const original = await page.locator('.achievements').evaluateAll((lists) => lists.map((list) => [...list.children].map((point) => point.textContent)))
+  for (const [index, entry] of (await entries.all()).entries()) {
+    const company = await entry.getByRole('heading', { level: 3 }).textContent()
+    const toggle = entry.getByRole('button')
+    await expect(toggle).toHaveAccessibleName(`Ver todos los logros de ${company}`)
+    await expect(toggle).toHaveAttribute('type', 'button')
+    await expect(toggle).toHaveAttribute('aria-expanded', 'false')
+    await expect(toggle).toHaveAttribute('aria-controls', await entry.getByRole('list').getAttribute('id') as string)
+    await toggle.focus()
+    // Shift+Tab/Tab enters the native keyboard focus path before activation.
+    await page.keyboard.press('Shift+Tab')
+    await page.keyboard.press('Tab')
+    await expectVisibleFocus(toggle)
+    await page.keyboard.press('Enter')
+    await expect(toggle).toHaveAttribute('aria-expanded', 'true')
+    await expect(toggle).toHaveAccessibleName(`Mostrar menos logros de ${company}`)
+    await expectVisibleFocus(toggle)
+    expect(await entry.locator('.achievements li:visible').allTextContents()).toEqual(original[index])
+    await expect(page.getByRole('button', { expanded: false })).toHaveCount(3)
+    await page.keyboard.press('Space')
+    await expect(toggle).toHaveAttribute('aria-expanded', 'false')
+    await expect(toggle).toHaveAccessibleName(`Ver todos los logros de ${company}`)
+    await expectVisibleFocus(toggle)
+    expect(await entry.locator('.achievements li:visible').allTextContents()).toEqual(original[index].slice(0, 2))
+  }
+
+  for (const width of [1440, 850, 375, 320]) {
+    await page.setViewportSize({ width, height: 900 })
+    for (const expanded of [false, true]) {
+      for (const toggle of await page.locator('.achievement-toggle').all()) {
+        if (expanded) await toggle.click()
+        const bounds = (await toggle.boundingBox())!
+        expect(bounds.height).toBeGreaterThanOrEqual(44)
+        expect(bounds.width).toBeGreaterThanOrEqual(44)
+        expect(bounds.x).toBeGreaterThanOrEqual(5)
+        expect(bounds.x + bounds.width).toBeLessThanOrEqual(width - 5)
+      }
+      await expect(page.locator('.achievements li:visible')).toHaveCount(expanded ? 13 : 8)
+      expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(width)
+    }
+    for (const toggle of await page.locator('.achievement-toggle').all()) await toggle.click()
+  }
+  await page.emulateMedia({ reducedMotion: 'reduce' })
+  for (const toggle of await page.locator('.achievement-toggle').all()) {
+    await expect(toggle).toHaveCSS('transition-duration', '0s')
+    await expect(toggle).toHaveCSS('animation-name', 'none')
+    await expect(toggle).toHaveCSS('transform', 'none')
+  }
+})
+
+test('print reveals all achievements and hides controls without changing disclosure state', async ({ page }) => {
+  const controls = page.locator('.achievement-toggle')
+  await expect(controls).toHaveCount(4)
+  for (const expandedCount of [0, 1, 4]) {
+    for (let index = 0; index < expandedCount; index++) {
+      const toggle = controls.nth(index)
+      if (await toggle.getAttribute('aria-expanded') === 'false') await toggle.click()
+    }
+    const states = await controls.evaluateAll((buttons) => buttons.map((button) => button.getAttribute('aria-expanded')))
+    await page.emulateMedia({ media: 'print' })
+    await expect(page.locator('.achievements li:visible')).toHaveCount(13)
+    for (const point of await page.locator('.achievements li').all()) await expect(point).toBeVisible()
+    for (const toggle of await controls.all()) await expect(toggle).toHaveCSS('display', 'none')
+    await page.emulateMedia({ media: 'screen' })
+    expect(await controls.evaluateAll((buttons) => buttons.map((button) => button.getAttribute('aria-expanded')))).toEqual(states)
+    await expect(page.locator('.achievements li:visible')).toHaveCount(expandedCount === 0 ? 8 : expandedCount === 1 ? 10 : 13)
+  }
 })
 
 test('editorial identity keeps the current role factual and the hero composition responsive', async ({ page }) => {
@@ -430,15 +515,15 @@ test('first Tab reveals the skip link and Enter transfers visible focus to main'
   await expect(page.getByRole('heading', { level: 1 })).toBeInViewport()
 })
 
-test('keyboard navigation exposes visible focus on navigation, actions, and contact links', async ({ page }) => {
-  const links = page.getByRole('link')
-  const count = await links.count()
+test('keyboard navigation exposes visible focus on navigation, actions, disclosures, and contact links', async ({ page }) => {
+  const targets = page.locator('a, button')
+  const count = await targets.count()
   // Walk the real tab order, without programmatically focusing the elements.
   for (let index = 0; index < count; index++) {
     await page.keyboard.press('Tab')
-    const link = links.nth(index)
-    await expectVisibleFocus(link)
-    await expect(link).toBeInViewport()
+    const target = targets.nth(index)
+    await expectVisibleFocus(target)
+    await expect(target).toBeInViewport()
   }
-  await expect(links.last()).toHaveAttribute('href', '#inicio')
+  await expect(targets.last()).toHaveAttribute('href', '#inicio')
 })

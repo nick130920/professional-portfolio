@@ -1,5 +1,6 @@
 import { fireEvent, render, screen, within } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
+import { renderToString } from 'react-dom/server'
 import App from './App'
 
 const identity = 'Nicolás Andrés Muñoz Coronado'
@@ -10,6 +11,65 @@ afterEach(() => {
 })
 
 describe('Progressive enhancement', () => {
+  it('prerenders all 13 achievements without disclosure controls for JavaScript-free reading', () => {
+    const html = new DOMParser().parseFromString(renderToString(<App />), 'text/html')
+
+    const points = html.querySelectorAll('.achievements li')
+    expect(points).toHaveLength(13)
+    points.forEach((point) => {
+      expect(point.hasAttribute('hidden')).toBe(false)
+      expect(point.hasAttribute('aria-hidden')).toBe(false)
+    })
+    expect(html.querySelector('button')).toBeNull()
+  })
+
+  it('initially shows exactly the first two achievements of every hydrated role', () => {
+    render(<App />)
+
+    for (const entry of screen.getAllByRole('article').slice(0, 4)) {
+      const points = within(entry).getAllByRole('listitem', { hidden: true })
+      expect(within(entry).getAllByRole('listitem')).toEqual(points.slice(0, 2))
+      points.forEach((point, index) => {
+        if (index < 2) expect(point).toBeVisible()
+        else expect(point).not.toBeVisible()
+      })
+      const company = within(entry).getByRole('heading', { level: 3 }).textContent!
+      const toggle = within(entry).getByRole('button', { name: `Ver todos los logros de ${company}` })
+      expect(toggle.tagName).toBe('BUTTON')
+      expect(toggle).toHaveAttribute('type', 'button')
+      expect(toggle).toHaveAttribute('aria-expanded', 'false')
+      expect(toggle).toHaveAttribute('aria-controls', within(entry).getByRole('list').id)
+    }
+    expect(screen.getAllByRole('button')).toHaveLength(4)
+  })
+
+  it('reveals and hides each role independently without changing achievement order or focus', () => {
+    render(<App />)
+    const entries = screen.getAllByRole('article').slice(0, 4)
+    const original = entries.map((entry) => within(entry).getAllByRole('listitem', { hidden: true }).map((point) => point.textContent))
+
+    entries.forEach((entry, index) => {
+      const company = within(entry).getByRole('heading', { level: 3 }).textContent!
+      const toggle = within(entry).getByRole('button', { name: `Ver todos los logros de ${company}` })
+      toggle.focus()
+      fireEvent.click(toggle)
+      expect(toggle).toHaveFocus()
+      expect(toggle).toHaveAccessibleName(`Mostrar menos logros de ${company}`)
+      expect(toggle).toHaveAttribute('aria-expanded', 'true')
+      expect(within(entry).getAllByRole('listitem').map((point) => point.textContent)).toEqual(original[index])
+      entries.filter((other) => other !== entry).forEach((other) => {
+        expect(within(other).getAllByRole('listitem')).toHaveLength(2)
+        expect(within(other).getByRole('button')).toHaveAttribute('aria-expanded', 'false')
+      })
+      fireEvent.click(toggle)
+      expect(toggle).toHaveFocus()
+      expect(toggle).toHaveAccessibleName(`Ver todos los logros de ${company}`)
+      expect(toggle).toHaveAttribute('aria-expanded', 'false')
+      expect(within(entry).getAllByRole('listitem').map((point) => point.textContent)).toEqual(original[index].slice(0, 2))
+      expect(within(entry).getAllByRole('listitem', { hidden: true }).map((point) => point.textContent)).toEqual(original[index])
+    })
+  })
+
   it('keeps reveal targets readable when browser enhancement APIs are unavailable', () => {
     render(<App />)
 
@@ -236,7 +296,7 @@ describe('Portfolio foundation', () => {
         expect(within(entry).getByText(fact, { exact: true })).toBeVisible()
       }
       expect(entry).toHaveTextContent(dates)
-      const points = within(entry).getAllByRole('listitem')
+      const points = within(entry).getAllByRole('listitem', { hidden: true })
       expect(points).toHaveLength(achievements.length)
       achievements.forEach((achievement, pointIndex) => {
         expect(points[pointIndex].textContent).toBe(achievement)
