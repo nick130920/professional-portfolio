@@ -30,7 +30,7 @@ Apply the two highest-impact findings from the Laws of UX audit without changing
 - [x] Give the statement a distinct but restrained visual treatment consistent with the current design system.
 - [x] Verify that it improves visual prioritization without competing with the primary hero action.
 - Verification: observed RED before implementation; 21 component tests and 34 Chromium checks passed; exact copy/source derivation, uniqueness, semantic order, non-interactivity, responsive geometry from 320 to 1440 px, contrast, keyboard flow, live reduced motion, JavaScript-disabled rendering, intentional print exclusion, build/prerender, hydration, and UX-001 regression coverage passed; both npm audits reported zero vulnerabilities.
-- Commit evidence: pending local work-unit commit.
+- Commit evidence: `ecea592` (`feat: emphasize portfolio positioning`).
 
 ## Acceptance Criteria
 1. After hydration, each role initially displays exactly its first two achievements.
@@ -42,5 +42,13 @@ Apply the two highest-impact findings from the Laws of UX audit without changing
 ## Review Workload
 Expected scope is four existing implementation/test files plus this task document. Keep two cohesive local work-unit commits if authorized; push and deployment remain separate decisions.
 
+## Native Review
+- Candidate: committed range after `ff79b3108d5d22d772a21f09ab96de11e6bb6b5d`.
+- Inspect resolved target `sha256:e05c3ee7adee449f002d4404fcb2797ac1ffac07cb46655679ebf874c4540bf8`.
+- The first START attempt mistakenly used a tree hash and was rejected as `base-ref-unresolvable`.
+- START with the correct full base commit failed with `identity-mismatch`.
+- Both attempts reported `lineage_created: false` and `mutation_performed: false`; no recovery or authority mutation was attempted.
+- Independent verification remains the available evidence.
+
 ## Next Step
-Run native review for the two completed UX work units, then decide whether to push and deploy them.
+Decide whether to push and deploy commits `5c20ec9` and `ecea592`, with the native review failure disclosed.
