@@ -92,9 +92,36 @@ export default function App() {
   const [currentSection, setCurrentSection] = useState('inicio')
   const [enhanced, setEnhanced] = useState(false)
   const [expandedRoles, setExpandedRoles] = useState<Record<string, boolean>>({})
+  const [narrowNavigation, setNarrowNavigation] = useState(false)
+  const [menuOpen, setMenuOpen] = useState(false)
+  const menuToggleRef = useRef<HTMLButtonElement>(null)
+  const navigationListRef = useRef<HTMLUListElement>(null)
+  const restoreNavigationFocus = useRef(false)
 
   // Match the prerender on the first client render; collapse only after hydration.
   useEffect(() => { setEnhanced(true) }, [])
+
+  useEffect(() => {
+    if (!window.matchMedia) return
+    const viewport = window.matchMedia('(max-width: 480px)')
+    const updateViewport = () => {
+      restoreNavigationFocus.current = viewport.matches
+        ? !!navigationListRef.current?.contains(document.activeElement)
+        : document.activeElement === menuToggleRef.current
+      setNarrowNavigation(viewport.matches)
+      setMenuOpen(false)
+    }
+    updateViewport()
+    viewport.addEventListener('change', updateViewport)
+    return () => viewport.removeEventListener('change', updateViewport)
+  }, [])
+
+  useEffect(() => {
+    if (!restoreNavigationFocus.current) return
+    restoreNavigationFocus.current = false
+    const target = narrowNavigation ? menuToggleRef.current : navigationListRef.current?.querySelector('a')
+    target?.focus({ preventScroll: true })
+  }, [narrowNavigation])
 
   useEffect(() => {
     const updateLocation = () => setCurrentSection(window.location.hash.slice(1) || 'inicio')
@@ -140,11 +167,28 @@ export default function App() {
           <span className="wordmark-monogram">nm<span aria-hidden="true">.</span></span>
           <span className="wordmark-caption">Software &amp;<br />arquitectura</span>
         </a>
+        {enhanced && (
+          <button
+            ref={menuToggleRef}
+            type="button"
+            className="navigation-toggle"
+            hidden={!narrowNavigation}
+            aria-expanded={menuOpen}
+            aria-controls="primary-navigation-links"
+            onClick={() => setMenuOpen((previous) => !previous)}
+          >
+            Menú
+          </button>
+        )}
         <nav aria-label="Navegación principal">
-          <ul role="list">
+          <ul id="primary-navigation-links" ref={navigationListRef} role="list" hidden={narrowNavigation && !menuOpen}>
             {navigation.map(([id, label]) => (
               <li key={id}>
-                <a href={`#${id}`} aria-current={currentSection === id ? 'location' : undefined}>
+                <a
+                  href={`#${id}`}
+                  aria-current={currentSection === id ? 'location' : undefined}
+                  onClick={() => { if (narrowNavigation) setMenuOpen(false) }}
+                >
                   {label}
                 </a>
               </li>

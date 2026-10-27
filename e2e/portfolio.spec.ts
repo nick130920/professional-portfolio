@@ -1,5 +1,5 @@
 import { readFile } from 'node:fs/promises'
-import { expect, test, type Locator } from '@playwright/test'
+import { expect, test, type Locator, type Page } from '@playwright/test'
 
 const contactHrefs = [
   'mailto:namc1309@gmail.com',
@@ -8,6 +8,11 @@ const contactHrefs = [
   'https://github.com/nick130920',
   'https://nicolasm.pro',
 ]
+
+async function openNarrowNavigation(page: Page) {
+  const toggle = page.getByRole('button', { name: 'Menú', exact: true })
+  if (await toggle.isVisible() && await toggle.getAttribute('aria-expanded') === 'false') await toggle.click()
+}
 
 async function expectVisibleFocus(locator: Locator) {
   await expect(locator).toBeFocused()
@@ -62,6 +67,13 @@ test('production HTML stays readable and navigable with JavaScript disabled', as
       await expect(section).toHaveCSS('opacity', '1')
       await expect(section).toHaveCSS('animation-name', 'none')
     }
+    for (const width of [320, 375, 430, 480, 600, 850, 1440]) {
+      await page.setViewportSize({ width, height: 900 })
+      const links = page.getByRole('navigation').getByRole('link')
+      await expect(links).toHaveCount(7)
+      for (const link of await links.all()) await expect(link).toBeVisible()
+      expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(width)
+    }
     await page.getByRole('navigation').getByRole('link', { name: 'Contacto', exact: true }).click()
     await expect(page.locator('#contact-title')).toBeInViewport()
     await expect(page.locator('#contacto a')).toHaveCount(5)
@@ -88,7 +100,7 @@ test('production HTML hydrates without errors and enhances native navigation', a
   await page.goto('/')
   await expect(page.locator('.achievements li:visible')).toHaveCount(8)
   await expect(page.getByText('Arquitectura y desarrollo full-stack para sistemas financieros y e-commerce.', { exact: true })).toBeVisible()
-  await expect(page.getByRole('button', { expanded: false })).toHaveCount(4)
+  await expect(page.locator('.achievement-toggle[aria-expanded="false"]')).toHaveCount(4)
   const prerendered = await page.evaluate((html) => {
     const document = new DOMParser().parseFromString(html, 'text/html')
     return [...document.querySelectorAll('.achievements')].map((list) => [...list.children].map((point) => point.textContent))
@@ -98,11 +110,108 @@ test('production HTML hydrates without errors and enhances native navigation', a
     expect(await list.locator('li').allTextContents()).toEqual(prerendered[index])
     expect(await list.locator('li:visible').allTextContents()).toEqual(prerendered[index].slice(0, 2))
   }
-  const contactLink = page.getByRole('navigation').getByRole('link', { name: 'Contacto', exact: true })
+  const contactLink = page.locator('nav a[href="#contacto"]')
+  await openNarrowNavigation(page)
   await contactLink.click()
   await expect(contactLink).toHaveAttribute('aria-current', 'location')
   await expect(page.locator('#contact-title')).toBeInViewport()
+  for (const width of [320, 375, 430, 480, 600, 850, 1440]) {
+    await page.setViewportSize({ width, height: 900 })
+    await page.goto('/')
+    await expect(page.locator('.achievement-toggle')).toHaveCount(4)
+    await expect(page.locator('nav a:visible')).toHaveCount(width <= 480 ? 0 : 7)
+    if (width <= 480) await expect(page.getByRole('button', { name: 'Menú' })).toHaveAttribute('aria-expanded', 'false')
+  }
   expect(errors).toEqual([])
+})
+
+test('mobile disclosure is compact, keyboard and pointer operable, and preserves native destinations at every width', async ({ page }) => {
+  for (const width of [320, 375, 430, 480, 600, 850, 1440]) {
+    await page.setViewportSize({ width, height: 900 })
+    await page.goto('/')
+    const toggle = page.getByRole('button', { name: 'Menú', exact: true })
+    const links = page.locator('nav a')
+    await expect(links).toHaveCount(7)
+    expect(await links.allTextContents()).toEqual(['Inicio', 'Perfil', 'Experiencia', 'Habilidades', 'Formación', 'Certificaciones', 'Contacto'])
+    if (width <= 480) {
+      await expect(toggle).toBeVisible()
+      await expect(toggle).toHaveAttribute('type', 'button')
+      await expect(toggle).toHaveAttribute('aria-expanded', 'false')
+      await expect(toggle).toHaveAttribute('aria-controls', await page.locator('nav ul').getAttribute('id') as string)
+      await expect(page.locator('nav a:visible')).toHaveCount(0)
+      const bounds = (await toggle.boundingBox())!
+      expect(bounds.height).toBeGreaterThanOrEqual(44)
+      expect(bounds.width).toBeGreaterThanOrEqual(44)
+      const header = (await page.locator('.site-header').boundingBox())!
+      const wordmark = (await page.locator('.wordmark').boundingBox())!
+      if (header.height > 100) throw new Error(`Header is not compact: ${JSON.stringify({ header, wordmark, bounds })}`)
+      expect(bounds.x).toBeGreaterThanOrEqual(wordmark.x + wordmark.width)
+      await page.keyboard.press('Tab')
+      await page.keyboard.press('Tab')
+      await page.keyboard.press('Tab')
+      await expectVisibleFocus(toggle)
+      await page.keyboard.press('Enter')
+      await expect(toggle).toHaveAttribute('aria-expanded', 'true')
+      await expectVisibleFocus(toggle)
+      await expect(page.locator('nav a:visible')).toHaveCount(7)
+      await page.keyboard.press('Space')
+      await expect(toggle).toHaveAttribute('aria-expanded', 'false')
+      await expectVisibleFocus(toggle)
+      await page.keyboard.press('Tab')
+      await expectVisibleFocus(page.getByRole('link', { name: 'Contactar por correo' }))
+      await toggle.click()
+      await expect(toggle).toHaveAttribute('aria-expanded', 'true')
+      await toggle.click()
+      await expect(toggle).toHaveAttribute('aria-expanded', 'false')
+      await expect(toggle).toBeFocused()
+      for (const [index, link] of (await links.all()).entries()) {
+        await toggle.click()
+        const target = await link.getAttribute('href')
+        if (index % 2 === 0) await link.click()
+        else { await link.focus(); await page.keyboard.press('Enter') }
+        await expect(page).toHaveURL(new RegExp(`${target}$`))
+        await expect(link).toHaveAttribute('aria-current', 'location')
+        await expect(page.locator(`${target} h1, ${target} h2`).first()).toBeInViewport()
+        await expect(toggle).toHaveAttribute('aria-expanded', 'false')
+        await expect(page.locator('nav a:visible')).toHaveCount(0)
+      }
+      await page.emulateMedia({ reducedMotion: 'reduce' })
+      await expect(toggle).toHaveCSS('transition-duration', '0s')
+      await expect(toggle).toHaveCSS('animation-name', 'none')
+      await page.emulateMedia({ media: 'print' })
+      await expect(page.locator('.site-header')).toHaveCSS('display', 'none')
+      await expect(toggle).not.toBeVisible()
+      await page.emulateMedia({ media: 'screen', reducedMotion: 'no-preference' })
+    } else {
+      await expect(toggle).not.toBeVisible()
+      await expect(page.locator('nav a:visible')).toHaveCount(7)
+    }
+    expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(width)
+  }
+})
+
+test('live breakpoint crossings reset disclosure state without hiding wide links or stranding focus', async ({ page }) => {
+  const toggle = page.getByRole('button', { name: 'Menú', exact: true })
+  const links = page.locator('nav a')
+  await page.setViewportSize({ width: 600, height: 900 })
+  await expect(page.locator('nav a:visible')).toHaveCount(7)
+  await links.nth(1).focus()
+  await page.setViewportSize({ width: 480, height: 900 })
+  await expect(toggle).toHaveAttribute('aria-expanded', 'false')
+  await expect(toggle).toBeFocused()
+  await expect(page.locator('nav a:visible')).toHaveCount(0)
+  for (const initiallyOpen of [false, true]) {
+    if (initiallyOpen) await toggle.click()
+    await toggle.focus()
+    await page.setViewportSize({ width: 481, height: 900 })
+    await expect(toggle).not.toBeVisible()
+    await expect(page.locator('nav a:visible')).toHaveCount(7)
+    await expect(links.first()).toBeFocused()
+    await page.setViewportSize({ width: 480, height: 900 })
+    await expect(toggle).toHaveAttribute('aria-expanded', 'false')
+    await expect(toggle).toBeFocused()
+    await expect(page.locator('nav a:visible')).toHaveCount(0)
+  }
 })
 
 test('career disclosures support Enter and Space independently with visible focus and responsive targets', async ({ page }) => {
@@ -125,7 +234,7 @@ test('career disclosures support Enter and Space independently with visible focu
     await expect(toggle).toHaveAccessibleName(`Mostrar menos logros de ${company}`)
     await expectVisibleFocus(toggle)
     expect(await entry.locator('.achievements li:visible').allTextContents()).toEqual(original[index])
-    await expect(page.getByRole('button', { expanded: false })).toHaveCount(3)
+    await expect(page.locator('.achievement-toggle[aria-expanded="false"]')).toHaveCount(3)
     await page.keyboard.press('Space')
     await expect(toggle).toHaveAttribute('aria-expanded', 'false')
     await expect(toggle).toHaveAccessibleName(`Ver todos los logros de ${company}`)
@@ -334,8 +443,9 @@ test('career and expertise use distinct editorial layouts without changing readi
 })
 
 test('narrow navigation and contact links provide complete unclipped touch targets', async ({ page }) => {
-  for (const width of [1440, 1000, 850, 600, 480, 375, 320]) {
+  for (const width of [1440, 1000, 850, 600, 480, 430, 375, 320]) {
     await page.setViewportSize({ width, height: 900 })
+    await openNarrowNavigation(page)
     const navigation = page.getByRole('navigation')
     await expect(navigation.getByRole('listitem')).toHaveCount(7)
     for (const link of await navigation.getByRole('link').all()) {
@@ -350,9 +460,9 @@ test('narrow navigation and contact links provide complete unclipped touch targe
       const first = (await links.nth(0).boundingBox())!
       const second = (await links.nth(1).boundingBox())!
       const third = (await links.nth(2).boundingBox())!
-      expect(second.y).toBeCloseTo(first.y, 0)
-      expect(third.y).toBeGreaterThanOrEqual(first.y + first.height)
-      expect(second.x).toBeGreaterThanOrEqual(first.x + first.width)
+      expect(second.y).toBeGreaterThanOrEqual(first.y + first.height)
+      expect(third.y).toBeGreaterThanOrEqual(second.y + second.height)
+      expect(second.x).toBeCloseTo(first.x, 0)
     }
     const contactLinks = page.locator('#contacto address a')
     await expect(contactLinks).toHaveCount(5)
@@ -408,8 +518,9 @@ test('normal motion uses a subtle one-shot reveal without hiding or translating 
   })
   expect(motion).toEqual({ opacity: '1', transform: 'none', animation: 'section-arrival', duration: '0.45s' })
   await expect(contact.getByRole('link').first()).toBeVisible()
+  await openNarrowNavigation(page)
   await page.getByRole('navigation').getByRole('link', { name: 'Experiencia', exact: true }).click()
-  await expect(page.getByRole('navigation').getByRole('link', { name: 'Experiencia', exact: true }))
+  await expect(page.locator('nav a[href="#experiencia"]'))
     .toHaveAttribute('aria-current', 'location')
   await expect(page.locator('#experiencia')).toHaveCSS('opacity', '1')
 })
@@ -576,6 +687,7 @@ test('every internal navigation link reaches its existing named destination', as
     const target = page.locator(destination)
     await expect(target).toHaveCount(1)
     await expect(target).toHaveAccessibleName(/\S/)
+    if (!await links.nth(index).isVisible()) await openNarrowNavigation(page)
     await links.nth(index).click()
     await expect(page).toHaveURL(new RegExp(`${destination}$`))
     await expect(target.getByRole('heading').first()).toBeInViewport()
@@ -597,7 +709,7 @@ test('first Tab reveals the skip link and Enter transfers visible focus to main'
 })
 
 test('keyboard navigation exposes visible focus on navigation, actions, disclosures, and contact links', async ({ page }) => {
-  const targets = page.locator('a, button')
+  const targets = page.locator('a:visible, button:visible')
   const count = await targets.count()
   // Walk the real tab order, without programmatically focusing the elements.
   for (let index = 0; index < count; index++) {

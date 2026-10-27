@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, within } from '@testing-library/react'
+import { act, fireEvent, render, screen, within } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { renderToString } from 'react-dom/server'
 import App from './App'
@@ -8,6 +8,93 @@ const identity = 'Nicolás Andrés Muñoz Coronado'
 afterEach(() => {
   vi.unstubAllGlobals()
   window.history.replaceState(null, '', '/')
+})
+
+describe('Mobile navigation disclosure', () => {
+  function mockViewport(initiallyNarrow = true) {
+    const viewport = new EventTarget() as EventTarget & { matches: boolean }
+    viewport.matches = initiallyNarrow
+    vi.stubGlobal('matchMedia', (query: string) => query === '(max-width: 480px)'
+      ? viewport
+      : { matches: false, addEventListener: vi.fn(), removeEventListener: vi.fn() })
+    const resize = (narrow: boolean) => act(() => {
+      viewport.matches = narrow
+      viewport.dispatchEvent(new Event('change'))
+    })
+    return Object.assign(resize, { removeListener: vi.spyOn(viewport, 'removeEventListener') })
+  }
+
+  it('prerenders all seven exact native destinations without a menu control', () => {
+    mockViewport()
+    const html = new DOMParser().parseFromString(renderToString(<App />), 'text/html')
+    const navigation = html.querySelector('nav')!
+    expect([...navigation.querySelectorAll('a')].map((link) => [link.textContent?.trim(), link.getAttribute('href')])).toEqual([
+      ['Inicio', '#inicio'], ['Perfil', '#perfil'], ['Experiencia', '#experiencia'],
+      ['Habilidades', '#habilidades'], ['Formación', '#formacion'],
+      ['Certificaciones', '#certificaciones'], ['Contacto', '#contacto'],
+    ])
+    expect(navigation.querySelector('[hidden], [aria-hidden="true"]')).toBeNull()
+    expect(html.querySelector('button')).toBeNull()
+  })
+
+  it('collapses after hydration and toggles all links without losing button focus', () => {
+    mockViewport()
+    render(<App />)
+    const navigation = screen.getByRole('navigation')
+    const toggle = screen.getByRole('button', { name: 'Menú' })
+    expect(toggle.tagName).toBe('BUTTON')
+    expect(toggle).toHaveAttribute('type', 'button')
+    const list = within(navigation).getByRole('list', { hidden: true })
+    expect(toggle).toHaveAttribute('aria-controls', list.id)
+    expect(toggle).toHaveAttribute('aria-expanded', 'false')
+    expect(within(navigation).queryAllByRole('link')).toHaveLength(0)
+    toggle.focus()
+    fireEvent.click(toggle)
+    expect(toggle).toHaveFocus()
+    expect(toggle).toHaveAttribute('aria-expanded', 'true')
+    expect(within(navigation).getAllByRole('link')).toHaveLength(7)
+    fireEvent.click(toggle)
+    expect(toggle).toHaveFocus()
+    expect(toggle).toHaveAttribute('aria-expanded', 'false')
+    expect(list).not.toBeVisible()
+  })
+
+  it('closes on link selection without cancelling native hash navigation', () => {
+    mockViewport()
+    render(<App />)
+    const toggle = screen.getByRole('button', { name: 'Menú' })
+    fireEvent.click(toggle)
+    const link = screen.getByRole('navigation').querySelector('a[href="#contacto"]')!
+    expect(fireEvent.click(link)).toBe(true)
+    expect(link).toHaveAttribute('href', '#contacto')
+    expect(toggle).toHaveAttribute('aria-expanded', 'false')
+    window.history.replaceState(null, '', '/#contacto')
+    fireEvent(window, new Event('hashchange'))
+    expect(link).toHaveAttribute('aria-current', 'location')
+  })
+
+  it('resets live breakpoint crossings and cleans up its listener', () => {
+    const resize = mockViewport(false)
+    const { unmount } = render(<App />)
+    const navigation = screen.getByRole('navigation')
+    expect(screen.queryByRole('button', { name: 'Menú' })).toBeNull()
+    expect(within(navigation).getAllByRole('link')).toHaveLength(7)
+    within(navigation).getByRole('link', { name: 'Perfil' }).focus()
+    resize(true)
+    const toggle = screen.getByRole('button', { name: 'Menú' })
+    expect(toggle).toHaveFocus()
+    expect(toggle).toHaveAttribute('aria-expanded', 'false')
+    fireEvent.click(toggle)
+    resize(false)
+    expect(screen.queryByRole('button', { name: 'Menú' })).toBeNull()
+    expect(within(navigation).getAllByRole('link')).toHaveLength(7)
+    resize(true)
+    expect(toggle).toHaveAttribute('aria-expanded', 'false')
+    expect(within(navigation).queryAllByRole('link')).toHaveLength(0)
+    unmount()
+    expect(resize.removeListener).toHaveBeenCalledWith('change', expect.any(Function))
+    resize(false)
+  })
 })
 
 describe('Progressive enhancement', () => {
@@ -72,6 +159,8 @@ describe('Progressive enhancement', () => {
 
   it('keeps reveal targets readable when browser enhancement APIs are unavailable', () => {
     render(<App />)
+    expect(screen.queryByRole('button', { name: 'Menú' })).toBeNull()
+    expect(within(screen.getByRole('navigation')).getAllByRole('link')).toHaveLength(7)
 
     const targets = document.querySelectorAll('[data-reveal]')
     expect(targets).toHaveLength(6)
@@ -106,7 +195,9 @@ describe('Progressive enhancement', () => {
       removeEventListener: vi.fn(),
     }
     const observers: { observe: ReturnType<typeof vi.fn>; disconnect: ReturnType<typeof vi.fn> }[] = []
-    vi.stubGlobal('matchMedia', () => preference)
+    vi.stubGlobal('matchMedia', (query: string) => query === '(max-width: 480px)'
+      ? { matches: false, addEventListener: vi.fn(), removeEventListener: vi.fn() }
+      : preference)
     vi.stubGlobal('IntersectionObserver', class {
       observe = vi.fn()
       disconnect = vi.fn()
