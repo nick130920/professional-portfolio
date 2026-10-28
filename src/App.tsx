@@ -94,12 +94,20 @@ export default function App() {
   const [expandedRoles, setExpandedRoles] = useState<Record<string, boolean>>({})
   const [narrowNavigation, setNarrowNavigation] = useState(false)
   const [menuOpen, setMenuOpen] = useState(false)
+  const [scrolled, setScrolled] = useState(false)
   const menuToggleRef = useRef<HTMLButtonElement>(null)
   const navigationListRef = useRef<HTMLUListElement>(null)
   const restoreNavigationFocus = useRef(false)
 
   // Match the prerender on the first client render; collapse only after hydration.
   useEffect(() => { setEnhanced(true) }, [])
+
+  useEffect(() => {
+    const updateScroll = () => setScrolled(window.scrollY > 0)
+    updateScroll()
+    window.addEventListener('scroll', updateScroll, { passive: true })
+    return () => window.removeEventListener('scroll', updateScroll)
+  }, [])
 
   useEffect(() => {
     if (!window.matchMedia) return
@@ -162,7 +170,7 @@ export default function App() {
     <>
       <a className="skip-link" href="#main-content">Saltar al contenido</a>
 
-      <header className="site-header shell">
+      <header className="site-header shell" data-scrolled={scrolled ? 'true' : undefined}>
         <a className="wordmark" href="#inicio" aria-label="Nicolás Muñoz · Inicio">
           <span className="wordmark-monogram">nm<span aria-hidden="true">.</span></span>
           <span className="wordmark-caption">Software &amp;<br />arquitectura</span>

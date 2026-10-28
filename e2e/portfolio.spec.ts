@@ -74,6 +74,20 @@ test('production HTML stays readable and navigable with JavaScript disabled', as
       for (const link of await links.all()) await expect(link).toBeVisible()
       expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(width)
     }
+    for (const width of [320, 480, 600, 1440]) {
+      await page.setViewportSize({ width, height: 900 })
+      await page.goto(baseURL!)
+      for (const link of await page.locator('a[href^="#"]').all()) {
+        const hash = (await link.getAttribute('href'))!
+        // No JS is available: routing through the DOM or JS scroll APIs is not an option.
+        if (hash === '#main-content') await page.keyboard.press('Tab')
+        await link.click()
+        const header = (await page.locator('.site-header').boundingBox())!
+        const target = (await page.locator(hash).boundingBox())!
+        expect(header.y).toBe(0)
+        expect(target.y, `no-JS ${width}px ${hash}`).toBeGreaterThanOrEqual(header.y + header.height)
+      }
+    }
     await page.getByRole('navigation').getByRole('link', { name: 'Contacto', exact: true }).click()
     await expect(page.locator('#contact-title')).toBeInViewport()
     await expect(page.locator('#contacto a')).toHaveCount(5)
@@ -504,6 +518,98 @@ test('contact interactions never shift text and live reduced motion removes tran
   await expect(link).toHaveCSS('transition-duration', '0.15s, 0.15s')
 })
 
+test('MOTION-001 full header stays sticky with stable scroll styling and operable scrolled menus', async ({ page }) => {
+  const header = page.locator('.site-header')
+  for (const width of [320, 375, 430, 480, 600, 850, 1440]) {
+    await page.setViewportSize({ width, height: 900 })
+    await page.goto('/')
+    await expect(header).not.toHaveAttribute('data-scrolled')
+    await expect(header).toHaveCSS('position', 'sticky')
+    await expect(header).toHaveCSS('top', '0px')
+    await expect(header).toHaveCSS('background-color', 'rgb(247, 245, 239)')
+    expect(await header.evaluate((element) => Number(getComputedStyle(element).zIndex))).toBeGreaterThanOrEqual(2)
+    const before = await header.boundingBox()
+    const mainTop = await page.locator('main').evaluate((element) => element.getBoundingClientRect().top + scrollY)
+    await page.evaluate(() => scrollTo(0, 360))
+    await expect(header).toHaveAttribute('data-scrolled', 'true')
+    expect((await header.boundingBox())!.y).toBe(0)
+    expect((await header.boundingBox())!.height).toBe(before!.height)
+    expect(await page.locator('main').evaluate((element) => element.getBoundingClientRect().top + scrollY)).toBe(mainTop)
+    if (width <= 480) {
+      const toggle = page.getByRole('button', { name: 'Menú', exact: true })
+      await toggle.focus()
+      await page.keyboard.press('Enter')
+      await expect(toggle).toHaveAttribute('aria-expanded', 'true')
+      await expect(toggle).toBeFocused()
+      await expect(page.locator('nav a:visible')).toHaveCount(7)
+      const contact = page.locator('nav a[href="#contacto"]')
+      await contact.click()
+      await expect(toggle).toHaveAttribute('aria-expanded', 'false')
+      await expect(page).toHaveURL(/#contacto$/)
+      await expect(contact).toHaveAttribute('aria-current', 'location')
+      expect((await page.locator('#contacto').boundingBox())!.y).toBeGreaterThanOrEqual((await header.boundingBox())!.height)
+    }
+    await page.evaluate(() => scrollTo(0, 0))
+    await expect(header).not.toHaveAttribute('data-scrolled')
+    expect((await header.boundingBox())!.height).toBe(before!.height)
+    expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(width)
+  }
+})
+
+test('MOTION-001 every native hash target clears the rendered header at responsive widths', async ({ page }) => {
+  for (const width of [320, 480, 600, 1440]) {
+    await page.setViewportSize({ width, height: 900 })
+    await page.goto('/')
+    // Exercise real anchor activation, including the skip link and repeated destinations.
+    const links = page.locator('a[href^="#"]')
+    for (const link of await links.all()) {
+      if (await link.evaluate((element) => !!element.closest('nav'))) await openNarrowNavigation(page)
+      const hash = (await link.getAttribute('href'))!
+      await link.evaluate((element) => (element as HTMLAnchorElement).click())
+      await expect(page).toHaveURL(new RegExp(`${hash}$`))
+      if (hash !== '#main-content') await expect(page.locator('nav a[href="' + hash + '"]')).toHaveAttribute('aria-current', 'location')
+      const header = (await page.locator('.site-header').boundingBox())!
+      const target = (await page.locator(hash).boundingBox())!
+      expect(target.y, `${width}px ${hash} clears sticky header`).toBeGreaterThanOrEqual(header.y + header.height)
+    }
+  }
+})
+
+test('MOTION-001 decorative rules draw without animating text and stop on live reduced motion or print', async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: 'no-preference' })
+  await page.reload()
+  const contact = page.locator('#contacto')
+  await contact.scrollIntoViewIfNeeded()
+  await expect(contact).toHaveAttribute('data-revealed', 'true')
+  const rule = () => contact.evaluate((element) => {
+    const style = getComputedStyle(element, '::before')
+    return { content: style.content, animation: style.animationName, transition: style.transitionDuration, display: style.display }
+  })
+  expect(await rule()).toMatchObject({ content: '""', animation: 'editorial-rule-draw' })
+  // Inspect keyframes rather than sampling a time-dependent frame.
+  const frames = await contact.evaluate((element) => element.getAnimations({ subtree: true }).flatMap((animation) =>
+    animation instanceof CSSAnimation && animation.animationName === 'editorial-rule-draw'
+      ? (animation.effect as KeyframeEffect).getKeyframes().map((frame) => frame.transform) : []))
+  expect(frames).toEqual(['scaleX(0)', 'scaleX(1)'])
+  for (const element of await page.locator('[data-reveal], [data-reveal] h2, [data-reveal] p, [data-reveal] a').all()) {
+    await expect(element).toHaveCSS('opacity', '1')
+    await expect(element).toHaveCSS('transform', 'none')
+    await expect(element).toHaveCSS('animation-name', 'none')
+  }
+  await expect(page.locator('.site-header')).toHaveCSS('transition-duration', '0.18s, 0.18s')
+  await page.emulateMedia({ reducedMotion: 'reduce' })
+  await expect(page.locator('[data-revealed]')).toHaveCount(0)
+  expect(await rule()).toMatchObject({ animation: 'none', transition: '0s' })
+  await expect(page.locator('.site-header')).toHaveCSS('transition-duration', '0s')
+  await expect(page.locator('.site-header')).toHaveCSS('animation-name', 'none')
+  await page.emulateMedia({ reducedMotion: 'no-preference' })
+  await expect(contact).toHaveAttribute('data-revealed', 'true')
+  expect(await rule()).toMatchObject({ animation: 'editorial-rule-draw' })
+  await page.emulateMedia({ media: 'print' })
+  expect(await rule()).toMatchObject({ display: 'none', animation: 'none', transition: '0s' })
+  await expect(page.locator('.site-header')).toHaveCSS('display', 'none')
+})
+
 test('normal motion uses a subtle one-shot reveal without hiding or translating text', async ({ page }) => {
   await page.emulateMedia({ reducedMotion: 'no-preference' })
   await page.reload()
@@ -516,7 +622,7 @@ test('normal motion uses a subtle one-shot reveal without hiding or translating 
     const style = getComputedStyle(element)
     return { opacity: style.opacity, transform: style.transform, animation: style.animationName, duration: style.animationDuration }
   })
-  expect(motion).toEqual({ opacity: '1', transform: 'none', animation: 'section-arrival', duration: '0.45s' })
+  expect(motion).toEqual({ opacity: '1', transform: 'none', animation: 'none', duration: '0s' })
   await expect(contact.getByRole('link').first()).toBeVisible()
   await openNarrowNavigation(page)
   await page.getByRole('navigation').getByRole('link', { name: 'Experiencia', exact: true }).click()
