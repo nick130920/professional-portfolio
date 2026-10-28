@@ -10,6 +10,37 @@ afterEach(() => {
   window.history.replaceState(null, '', '/')
 })
 
+describe('Sticky editorial header', () => {
+  it('marks scroll away from top, resets at top, and removes its passive listener', () => {
+    vi.stubGlobal('scrollY', 0)
+    const add = vi.spyOn(window, 'addEventListener')
+    const remove = vi.spyOn(window, 'removeEventListener')
+    const { unmount } = render(<App />)
+    const header = screen.getByRole('banner')
+    expect(header).not.toHaveAttribute('data-scrolled')
+    vi.stubGlobal('scrollY', 1)
+    fireEvent.scroll(window)
+    expect(header).toHaveAttribute('data-scrolled', 'true')
+    vi.stubGlobal('scrollY', 0)
+    fireEvent.scroll(window)
+    expect(header).not.toHaveAttribute('data-scrolled')
+    expect(add).toHaveBeenCalledWith('scroll', expect.any(Function), { passive: true })
+    const listener = add.mock.calls.find(([event]) => event === 'scroll')![1]
+    unmount()
+    expect(remove).toHaveBeenCalledWith('scroll', listener)
+    add.mockRestore()
+    remove.mockRestore()
+  })
+
+  it('initializes the marker for a restored scroll position without marking prerendered HTML', () => {
+    vi.stubGlobal('scrollY', 240)
+    const html = new DOMParser().parseFromString(renderToString(<App />), 'text/html')
+    expect(html.querySelector('.site-header')!.hasAttribute('data-scrolled')).toBe(false)
+    render(<App />)
+    expect(screen.getByRole('banner')).toHaveAttribute('data-scrolled', 'true')
+  })
+})
+
 describe('Mobile navigation disclosure', () => {
   function mockViewport(initiallyNarrow = true) {
     const viewport = new EventTarget() as EventTarget & { matches: boolean }

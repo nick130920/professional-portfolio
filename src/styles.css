@@ -126,6 +126,32 @@ dd a [aria-hidden] { flex-shrink: 0; color: var(--blue); }
 /* Career is the long-form feature; supporting sections use shorter rhythms.
    Screen-only compositions leave the existing linear print CV intact. */
 @media screen {
+  :root { --header-clearance: 8rem; }
+  /* Native anchors work before hydration too; reserve the wrapped header height. */
+  main[id], section[id] { scroll-margin-top: var(--header-clearance); }
+  .site-header {
+    position: sticky;
+    top: 0;
+    z-index: 5;
+    background: #f7f5ef;
+  }
+  .site-header[data-scrolled="true"] {
+    border-bottom-color: var(--line);
+    box-shadow: 0 5px 0 rgb(24 37 43 / 5%);
+  }
+  /* Only this decorative ink rule scales; section content stays in normal flow. */
+  [data-reveal] { position: relative; }
+  [data-reveal]::before {
+    content: '';
+    position: absolute;
+    top: -2px;
+    left: 0;
+    width: clamp(4rem, 20%, 12rem);
+    height: 2px;
+    background: var(--blue);
+    pointer-events: none;
+    transform-origin: left;
+  }
   .profile { grid-template-columns: minmax(0, 1fr) minmax(0, 2fr); gap: 4rem; }
   .profile-copy { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1.5rem 2.5rem; }
   .profile-copy .lead { grid-column: 1 / -1; max-width: 23em; font-family: var(--editorial); font-size: clamp(1.75rem, 2.7vw, 2.4rem); line-height: 1.25; letter-spacing: -0.025em; }
@@ -215,6 +241,7 @@ dd a [aria-hidden] { flex-shrink: 0; color: var(--blue); }
 }
 
 @media screen and (max-width: 850px) {
+  :root { --header-clearance: 13rem; }
   .profile, .career, .expertise, .education, .certifications, .contact { grid-template-columns: minmax(0, 1fr); gap: 2rem; }
   .contact { padding-block: 3rem; margin-bottom: 0; }
   .career > .section-heading { grid-template-columns: minmax(0, 1fr); gap: 0.75rem; }
@@ -256,13 +283,21 @@ dd a [aria-hidden] { flex-shrink: 0; color: var(--blue); }
   .site-footer { flex-direction: column; align-items: flex-start; gap: 1rem; }
 }
 
+@media screen and (max-width: 480px) {
+  /* No JS: all seven stacked links remain visible in the full sticky header. */
+  :root { --header-clearance: 28rem; }
+  /* Enhanced link selection closes the menu before native anchor scrolling. */
+  :root:has(.navigation-toggle) { --header-clearance: 6.5rem; }
+}
+
 /* Reveal only the decorative rule: text never changes opacity or position. */
 @media screen and (prefers-reduced-motion: no-preference) {
   .button, nav a, .contact-row a, .site-footer a { transition: background-color 150ms ease, color 150ms ease; }
-  [data-revealed="true"] { animation: section-arrival 450ms ease-out; }
-  @keyframes section-arrival {
-    from { border-top-color: var(--blue); }
-    to { border-top-color: var(--line); }
+  .site-header { transition: border-color 180ms ease, box-shadow 180ms ease; }
+  [data-revealed="true"]::before { animation: editorial-rule-draw 700ms cubic-bezier(0.22, 1, 0.36, 1) both; }
+  @keyframes editorial-rule-draw {
+    from { transform: scaleX(0); background-color: var(--ink); }
+    to { transform: scaleX(1); background-color: var(--blue); }
   }
 }
 
@@ -278,7 +313,7 @@ dd a [aria-hidden] { flex-shrink: 0; color: var(--blue); }
   }
   .shell { width: 100%; margin: 0; }
   /* The screen-only synthesis repeats the profile and hero; keep the CV compact. */
-  .editorial-positioning { display: none; }
+  .editorial-positioning, [data-reveal]::before { display: none; }
   .site-header, .skip-link, .hero-masthead, .hero-actions, .hero-note, .site-footer { display: none; }
   .hero, .section { display: block; padding-block: 12pt; }
   .hero { padding-top: 0; }
